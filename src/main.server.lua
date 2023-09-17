@@ -205,7 +205,7 @@ local mEdgeB = nil
 local mModeScreenGui = Instance.new('ScreenGui')
 local DARK_RED = Color3.new(0.705882, 0, 0)
 
-local function MakeModeGui(ident, pos, topText, options, optionDetails, optionIcons)
+local function MakeModeGui(ident, pos, topText, options, optionText, optionDetails, optionIcons)
 	optionDetails = optionDetails or {}
 	optionIcons = optionIcons or {}
 	topText = topText or ""
@@ -281,7 +281,7 @@ local function MakeModeGui(ident, pos, topText, options, optionDetails, optionIc
 	--
 	local mTopText = Instance.new('TextLabel', mModeGui)
 	mTopText.Name = "TopText"
-	mTopText.Size = UDim2.new(0.7, 0, 0, 20)
+	mTopText.Size = UDim2.new(0.8, 0, 0, 20)
 	mTopText.Position = UDim2.new(0, 0, 0, -20)
 	mTopText.BorderSizePixel = 0
 	mTopText.Font = Enum.Font.SourceSansBold
@@ -364,7 +364,8 @@ local function MakeModeGui(ident, pos, topText, options, optionDetails, optionIc
 	--
 	for index, option in pairs(options) do
 		local modeGui = Instance.new('TextButton', mContent)
-		modeGui.Text = option
+		modeGui.RichText = true
+		modeGui.Text = optionText[index]
 		modeGui.BackgroundColor3 = Color3.new(0, 0, 0)
 		modeGui.TextColor3 = Color3.new(1, 1, 1)
 		modeGui.BorderColor3 = Color3.new(0.203922, 0.203922, 0.203922)
@@ -431,10 +432,14 @@ end
 local FORCE_DEFAULT = "Default"
 local FORCE_NEGATIVE = "Negative"
 
-local mModeOption = MakeModeGui('Mode', UDim2.new(0, 20, 0, 20), "Force Direction", 
+local mModeOption = MakeModeGui('Mode', UDim2.new(0, 20, 0, 20), "Direction Override",
 	{
 		FORCE_DEFAULT,
 		FORCE_NEGATIVE,
+	},
+	{
+		"Default",
+		"Opposite",
 	},
 	{
 		"The plugin will guess what side is the \"top\", that you want to be flush with the edges. (In most cases, the plugin guesses right)",
@@ -446,7 +451,7 @@ local THICKNESS_ONE_STUD = "One Stud"
 local THICKNESS_PLATE = "Plate"
 local THICKNESS_THINNEST = "Thinnest"
 
-local mThicknessOption = MakeModeGui('Thickness', UDim2.new(0, 20, 0, 120), "Part Thickness", 
+local mThicknessOption = MakeModeGui('Thickness', UDim2.new(0, 20, 0, 120), "Created Part Thickness",
 	{
 		THICKNESS_BEST_GUESS,
 		THICKNESS_ONE_STUD,
@@ -454,10 +459,16 @@ local mThicknessOption = MakeModeGui('Thickness', UDim2.new(0, 20, 0, 120), "Par
 		THICKNESS_THINNEST,
 	},
 	{
+		"Best Guess",
+		"One Stud <font size='16'><i>(1 stud)</i></font>",
+		"Plate <font size='16'><i>(0.2 studs)</i></font>",
+		"Thinnest <font size='16'><i>(0.05 studs)</i></font>",
+	},
+	{
 		"Make the spanning parts about as thick as the parts whose edges you selected.",
-		"Make the spanning parts 1 studs thick.",
-		"Make the spanning parts 0.2 studs thick. (Thin, but they will still have good collision properties)",
-		"Make the spanning parts as thin as possible. (0.05 studs)"
+		"Make the spanning parts exactly 1 stud thick.",
+		"The classic minimum thickness allowed by the engine when I first implemented the plugin.",
+		"As thin as possible. 0.001 studs is technically the minimum part size, however the physics engine treats parts thinner than 0.05 as that big anyways, so filling with parts thinner than 0.05 causes issues.",
 	})
 
 local mIgnoreNextTargetFilterDeparent = false
