@@ -19,4 +19,5 @@ return function(fromPart: BasePart, toPart: BasePart)
 	toPart.Material     = fromPart.Material
 	toPart.Reflectance  = fromPart.Reflectance
 	toPart.Transparency = fromPart.Transparency
+	toPart.MaterialVariant = fromPart.MaterialVariant
 end
