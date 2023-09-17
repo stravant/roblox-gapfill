@@ -320,7 +320,7 @@ local function MakeModeGui(ident, pos, topText, options, optionDetails, optionIc
 	mTopQ.BackgroundColor3 = Color3.new(0, 0, 0)
 	mTopQ.BackgroundTransparency = 0.2
 	mTopQ.Text = "?"
-	mTopQ.MouseButton1Down:connect(function()
+	mTopQ.MouseButton1Down:Connect(function()
 		mHintOn = not mHintOn
 		if mHintOn then
 			mTopQ.BorderColor3 = Color3.new(1, 0, 0)
@@ -333,13 +333,13 @@ local function MakeModeGui(ident, pos, topText, options, optionDetails, optionIc
 			mBottomText.Visible = false
 		end
 	end)
-	mTopQ.MouseEnter:connect(function()
+	mTopQ.MouseEnter:Connect(function()
 		if not mHintOn then
 			mTopQ.BorderColor3 = Color3.new(1, 1, 1)
 			mTopQ.BorderSizePixel = 1
 		end
 	end)
-	mTopQ.MouseLeave:connect(function()
+	mTopQ.MouseLeave:Connect(function()
 		if not mHintOn then
 			mTopQ.BorderSizePixel = 0
 		end
