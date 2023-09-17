@@ -1,3 +1,7 @@
+--!nolint DeprecatedApi
+-- Disabled because we still need to copy CollisionGroupId for
+-- legacy support even though it's deprecated.
+
 return function(fromPart: BasePart, toPart: BasePart)
 	toPart.Anchored     = fromPart.Anchored
 	toPart.Massless     = fromPart.Massless
