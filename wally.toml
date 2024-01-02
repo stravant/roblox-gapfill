@@ -6,7 +6,8 @@ realm = "shared"
 
 [dependencies]
 Signal = "stravant/goodsignal@0.2.1"
-Roact = "roblox/roact@1.4.4"
+React = "jsdotlua/react@17.1.0"
+ReactRoblox = "jsdotlua/react-roblox@17.1.0"
 Geometry = "stravant/geometry@0.1.2"
 createSharedToolbar = "stravant/create-shared-toolbar@0.1.0"
 DraggerHandler = "stravant/dragger-handler@0.1.3"
