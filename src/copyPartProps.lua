@@ -42,8 +42,6 @@ local IGNORE_PROPS = {
 local testPart = Instance.new("Part")
 
 for _, property in ReflectionService:GetPropertiesOfClass("BasePart") do
-	print(property.Name)
-	print(property.Permits.Write)
 	local name = property.Name :: string
 
 	-- not copying these properties
