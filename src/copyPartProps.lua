@@ -1,4 +1,4 @@
-blocal ReflectionService = game:GetService("ReflectionService")
+local ReflectionService = game:GetService("ReflectionService")
 
 local BASE_PART_PROPS = {} :: { string }
 
