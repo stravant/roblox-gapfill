@@ -199,8 +199,8 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 	local function getThicknessOverride(): number?
 		if currentSettings.ThicknessMode == "OneStud" then
 			return 1
-		elseif currentSettings.ThicknessMode == "Plate" then
-			return 0.2
+		elseif currentSettings.ThicknessMode == "Custom" then
+			return currentSettings.CustomThickness
 		elseif currentSettings.ThicknessMode == "Thinnest" then
 			return 0.05
 		else
