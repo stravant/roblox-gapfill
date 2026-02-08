@@ -1,0 +1,15 @@
+{
+	"name": "GapFill",
+	"tree": {
+		"$className": "Folder",
+		"Src": {
+			"$path": "src"
+		},
+		"Packages": {
+			"$path": "Packages"
+		},
+		"Loader": {
+			"$path": "runtests.server.lua"
+		}
+	}
+}
