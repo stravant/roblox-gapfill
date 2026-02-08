@@ -1,5 +1,8 @@
 {
-	"name": "GapFill v1.3.2",
+	"name": "GapFill V2.0",
+	"globIgnorePaths": [
+		"**/*.spec.lua"
+	],
 	"tree": {
 		"$className": "Folder",
 		"Src": {
@@ -7,6 +10,9 @@
 		},
 		"Packages": {
 			"$path": "Packages"
+		},
+		"Loader": {
+			"$path": "loader.server.lua"
 		}
 	}
 }

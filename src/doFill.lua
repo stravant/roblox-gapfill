@@ -414,7 +414,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			end
 		end
 	end
-	game:GetService('ChangeHistoryService'):SetWaypoint('GapFill')
+	return true
 end
 
 return doFill

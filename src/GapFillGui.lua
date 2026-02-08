@@ -1,0 +1,240 @@
+local Plugin = script.Parent.Parent
+local Packages = Plugin.Packages
+local React = require(Packages.React)
+
+local Colors = require("./PluginGui/Colors")
+local SubPanel = require("./PluginGui/SubPanel")
+local PluginGui = require("./PluginGui/PluginGui")
+local OperationButton = require("./PluginGui/OperationButton")
+local ChipForToggle = require("./PluginGui/ChipForToggle")
+local Settings = require("./Settings")
+local PluginGuiTypes = require("./PluginGui/Types")
+
+local e = React.createElement
+
+local function createNextOrder()
+	local order = 0
+	return function()
+		order += 1
+		return order
+	end
+end
+
+local function DirectionPanel(props: {
+	Settings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	LayoutOrder: number?,
+})
+	local current = props.Settings.DirectionMode
+	return e(SubPanel, {
+		Title = "Direction Override",
+		LayoutOrder = props.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, {
+		Buttons = e("Frame", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			LayoutOrder = 1,
+		}, {
+			ListLayout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 4),
+			}),
+			Default = e(ChipForToggle, {
+				Text = "Default",
+				IsCurrent = current == "Default",
+				LayoutOrder = 1,
+				OnClick = function()
+					props.Settings.DirectionMode = "Default"
+					props.UpdatedSettings()
+				end,
+			}),
+			Opposite = e(ChipForToggle, {
+				Text = "Opposite",
+				IsCurrent = current == "Negative",
+				LayoutOrder = 2,
+				OnClick = function()
+					props.Settings.DirectionMode = "Negative"
+					props.UpdatedSettings()
+				end,
+			}),
+		}),
+	})
+end
+
+local function ThicknessPanel(props: {
+	Settings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	LayoutOrder: number?,
+})
+	local current = props.Settings.ThicknessMode
+	return e(SubPanel, {
+		Title = "Created Part Thickness",
+		LayoutOrder = props.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, {
+		Row1 = e("Frame", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			LayoutOrder = 1,
+		}, {
+			ListLayout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 4),
+			}),
+			BestGuess = e(ChipForToggle, {
+				Text = "Best Guess",
+				IsCurrent = current == "BestGuess",
+				LayoutOrder = 1,
+				OnClick = function()
+					props.Settings.ThicknessMode = "BestGuess"
+					props.UpdatedSettings()
+				end,
+			}),
+			OneStud = e(ChipForToggle, {
+				Text = "One Stud",
+				IsCurrent = current == "OneStud",
+				LayoutOrder = 2,
+				OnClick = function()
+					props.Settings.ThicknessMode = "OneStud"
+					props.UpdatedSettings()
+				end,
+			}),
+		}),
+		Row2 = e("Frame", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			LayoutOrder = 2,
+		}, {
+			ListLayout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 4),
+			}),
+			Plate = e(ChipForToggle, {
+				Text = "Plate",
+				IsCurrent = current == "Plate",
+				LayoutOrder = 1,
+				OnClick = function()
+					props.Settings.ThicknessMode = "Plate"
+					props.UpdatedSettings()
+				end,
+			}),
+			Thinnest = e(ChipForToggle, {
+				Text = "Thinnest",
+				IsCurrent = current == "Thinnest",
+				LayoutOrder = 2,
+				OnClick = function()
+					props.Settings.ThicknessMode = "Thinnest"
+					props.UpdatedSettings()
+				end,
+			}),
+		}),
+	})
+end
+
+local function StatusDisplay(props: {
+	EdgeState: "EdgeA" | "EdgeB",
+	LayoutOrder: number?,
+})
+	local text = if props.EdgeState == "EdgeA"
+		then "Select first edge"
+		else "Select second edge, or click empty space to cancel"
+	return e("TextLabel", {
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 0,
+		BackgroundColor3 = Colors.GREY,
+		BorderSizePixel = 0,
+		Font = Enum.Font.SourceSans,
+		TextSize = 18,
+		TextColor3 = Colors.WHITE,
+		RichText = true,
+		Text = `<i>{text}</i>`,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		LayoutOrder = props.LayoutOrder,
+	}, {
+		Padding = e("UIPadding", {
+			PaddingTop = UDim.new(0, 2),
+			PaddingBottom = UDim.new(0, 2),
+			PaddingLeft = UDim.new(0, 4),
+			PaddingRight = UDim.new(0, 4),
+		}),
+		Corner = e("UICorner", {
+			CornerRadius = UDim.new(0, 4),
+		}),
+	})
+end
+
+local GAPFILL_CONFIG: PluginGuiTypes.PluginGuiConfig = {
+	PluginName = "GapFill",
+	PendingText = "...",
+	TutorialElement = nil,
+}
+
+local function GapFillGui(props: {
+	GuiState: PluginGuiTypes.PluginGuiMode,
+	CurrentSettings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	HandleAction: (string) -> (),
+	Panelized: boolean,
+	EdgeState: "EdgeA" | "EdgeB",
+})
+	local nextOrder = createNextOrder()
+	return e(PluginGui, {
+		Config = GAPFILL_CONFIG,
+		State = {
+			Mode = props.GuiState,
+			Settings = props.CurrentSettings,
+			UpdatedSettings = props.UpdatedSettings,
+			HandleAction = props.HandleAction,
+			Panelized = props.Panelized,
+		},
+	}, {
+		StatusDisplay = e(StatusDisplay, {
+			EdgeState = props.EdgeState,
+			LayoutOrder = nextOrder(),
+		}),
+		DirectionPanel = e(DirectionPanel, {
+			Settings = props.CurrentSettings,
+			UpdatedSettings = props.UpdatedSettings,
+			LayoutOrder = nextOrder(),
+		}),
+		ThicknessPanel = e(ThicknessPanel, {
+			Settings = props.CurrentSettings,
+			UpdatedSettings = props.UpdatedSettings,
+			LayoutOrder = nextOrder(),
+		}),
+		CancelButtonPadding = e("Frame", {
+			Size = UDim2.fromScale(1, 0),
+			BackgroundTransparency = 1,
+			LayoutOrder = nextOrder(),
+			AutomaticSize = Enum.AutomaticSize.Y,
+		}, {
+			Padding = e("UIPadding", {
+				PaddingTop = UDim.new(0, 10),
+				PaddingBottom = UDim.new(0, 10),
+				PaddingLeft = UDim.new(0, 12),
+				PaddingRight = UDim.new(0, 12),
+			}),
+			CancelButton = e(OperationButton, {
+				Text = "Close <i>GapFill</i>",
+				Color = Colors.DARK_RED,
+				Disabled = false,
+				Height = 34,
+				OnClick = function()
+					props.HandleAction("cancel")
+				end,
+			}),
+		}),
+	})
+end
+
+return GapFillGui
