@@ -14,6 +14,18 @@ local Signal = require(Packages.Signal)
 local doFill = require(Src.doFill)
 local Settings = require("./Settings")
 
+type GeometryEdge = typeof(Geometry.getGeometry(...).edges[1])
+type GeometryEdgeWithClick = GeometryEdge & {
+	click: Vector3,
+}
+type GeometryFace = typeof(Geometry.getGeometry(...).faces[1])
+
+local function edgeWithClick(edge: GeometryEdge, click: Vector3): GeometryEdgeWithClick
+	local withClick = (edge :: any) :: GeometryEdgeWithClick
+	withClick.click = click
+	return withClick
+end
+
 local function drawFace(parent: Instance, face: any, color: Color3, trans: number, zmod: number): { Instance }
 	local scale = math.max(face.vertexMargin or 0, 0.15) / 8
 	if scale > 0.2 then
@@ -60,18 +72,18 @@ local function drawFace(parent: Instance, face: any, color: Color3, trans: numbe
 	return {line, head, lineOnTop, headOnTop}
 end
 
-local function getHoverEdgeSimple(hit: RaycastResult)
+local function getHoverEdgeSimple(hit: RaycastResult): (GeometryEdgeWithClick?, GeometryFace?)
 	local point = hit.Position
 	local geom = Geometry.getGeometry(hit.Instance, point)
 
-	local bestEdge = nil
+	local bestEdge: GeometryEdgeWithClick? = nil
 	local bestDist = math.huge
 
 	for _, edge in pairs(geom.edges) do
 		local dist = (point - edge.a - edge.direction*(point - edge.a):Dot(edge.direction)).Magnitude
 		if dist < bestDist then
 			bestDist = dist
-			bestEdge = edge
+			bestEdge = edgeWithClick(edge, point)
 		end
 	end
 
@@ -94,7 +106,7 @@ local function getHoverEdgeSimple(hit: RaycastResult)
 		end
 	end
 
-	return bestEdge, bestFace
+	return assert(bestEdge), bestFace
 end
 
 local function mouseRaycast(): RaycastResult?
@@ -103,24 +115,23 @@ local function mouseRaycast(): RaycastResult?
 	return workspace:Raycast(ray.Origin, ray.Direction * 9999)
 end
 
-local function getPrimaryEdge(result: RaycastResult)
+local function getPrimaryEdge(result: RaycastResult): (GeometryEdgeWithClick?, GeometryFace?)
 	if result.Instance:IsA("MeshPart") or result.Instance:IsA("UnionOperation") then
 		local edge = Geometry.blackboxFindClosestMeshEdge(result, workspace.CurrentCamera.CFrame.LookVector)
 		if edge then
-			edge.click = result.Position
-			return edge
+			return edgeWithClick(edge, result.Position), nil
 		end
 	end
 	return getHoverEdgeSimple(result)
 end
 
-local function getHoverEdge()
+local function getHoverEdge(): (GeometryEdgeWithClick?, GeometryFace?)
 	local result = mouseRaycast()
 	if result then
 		local primaryEdge, bestFace = getPrimaryEdge(result)
-		return primaryEdge, bestFace, result
+		return primaryEdge, bestFace
 	else
-		return nil
+		return nil, nil
 	end
 end
 
@@ -133,9 +144,6 @@ local function startRecording(): string?
 end
 local function commitRecording(id: string)
 	ChangeHistoryService:FinishRecording(id, Enum.FinishRecordingOperation.Commit)
-end
-local function cancelRecording(id: string)
-	ChangeHistoryService:FinishRecording(id, Enum.FinishRecordingOperation.Cancel)
 end
 
 local function createGapFillSession(plugin: Plugin, currentSettings: Settings.GapFillSettings)
