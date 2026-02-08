@@ -3,6 +3,7 @@ local Packages = Plugin.Packages
 local React = require(Packages.React)
 
 local Colors = require("./PluginGui/Colors")
+local HelpGui = require("./PluginGui/HelpGui")
 local SubPanel = require("./PluginGui/SubPanel")
 local PluginGui = require("./PluginGui/PluginGui")
 local OperationButton = require("./PluginGui/OperationButton")
@@ -32,34 +33,39 @@ local function DirectionPanel(props: {
 		LayoutOrder = props.LayoutOrder,
 		Padding = UDim.new(0, 4),
 	}, {
-		Buttons = e("Frame", {
-			Size = UDim2.fromScale(1, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
+		Buttons = e(HelpGui.WithHelpIcon, {
 			LayoutOrder = 1,
-		}, {
-			ListLayout = e("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 4),
+			Subject = e("Frame", {
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+			}, {
+				ListLayout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 4),
+				}),
+				Default = e(ChipForToggle, {
+					Text = "Default",
+					IsCurrent = current == "Default",
+					LayoutOrder = 1,
+					OnClick = function()
+						props.Settings.DirectionMode = "Default"
+						props.UpdatedSettings()
+					end,
+				}),
+				Opposite = e(ChipForToggle, {
+					Text = "Opposite",
+					IsCurrent = current == "Negative",
+					LayoutOrder = 2,
+					OnClick = function()
+						props.Settings.DirectionMode = "Negative"
+						props.UpdatedSettings()
+					end,
+				}),
 			}),
-			Default = e(ChipForToggle, {
-				Text = "Default",
-				IsCurrent = current == "Default",
-				LayoutOrder = 1,
-				OnClick = function()
-					props.Settings.DirectionMode = "Default"
-					props.UpdatedSettings()
-				end,
-			}),
-			Opposite = e(ChipForToggle, {
-				Text = "Opposite",
-				IsCurrent = current == "Negative",
-				LayoutOrder = 2,
-				OnClick = function()
-					props.Settings.DirectionMode = "Negative"
-					props.UpdatedSettings()
-				end,
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText = "The plugin guesses which side is the \"top\" that should be flush with the edges. Choose <b>Opposite</b> to invert the choice when it guesses wrong.",
 			}),
 		}),
 	})
@@ -76,82 +82,105 @@ local function ThicknessPanel(props: {
 		LayoutOrder = props.LayoutOrder,
 		Padding = UDim.new(0, 4),
 	}, {
-		Row1 = e("Frame", {
-			Size = UDim2.fromScale(1, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
+		Buttons = e(HelpGui.WithHelpIcon, {
 			LayoutOrder = 1,
-		}, {
-			ListLayout = e("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 4),
+			Subject = e("Frame", {
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+			}, {
+				ListLayout = e("UIListLayout", {
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 4),
+				}),
+				Row1 = e("Frame", {
+					Size = UDim2.fromScale(1, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					LayoutOrder = 1,
+				}, {
+					ListLayout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 4),
+					}),
+					BestGuess = e(ChipForToggle, {
+						Text = "Best Guess",
+						IsCurrent = current == "BestGuess",
+						LayoutOrder = 1,
+						OnClick = function()
+							props.Settings.ThicknessMode = "BestGuess"
+							props.UpdatedSettings()
+						end,
+					}),
+					OneStud = e(ChipForToggle, {
+						Text = "One Stud",
+						IsCurrent = current == "OneStud",
+						LayoutOrder = 2,
+						OnClick = function()
+							props.Settings.ThicknessMode = "OneStud"
+							props.UpdatedSettings()
+						end,
+					}),
+				}),
+				Row2 = e("Frame", {
+					Size = UDim2.fromScale(1, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					LayoutOrder = 2,
+				}, {
+					ListLayout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 4),
+					}),
+					Thinnest = e(ChipForToggle, {
+						Text = "Thinnest",
+						IsCurrent = current == "Thinnest",
+						LayoutOrder = 1,
+						OnClick = function()
+							props.Settings.ThicknessMode = "Thinnest"
+							props.UpdatedSettings()
+						end,
+					}),
+					Custom = e(ChipForToggle, {
+						Text = "Custom",
+						IsCurrent = current == "Custom",
+						LayoutOrder = 2,
+						OnClick = function()
+							props.Settings.ThicknessMode = "Custom"
+							props.UpdatedSettings()
+						end,
+					}),
+				}),
+				CustomInput = current == "Custom" and e(NumberInput, {
+					Label = "Thickness",
+					Unit = " studs",
+					Value = props.Settings.CustomThickness,
+					ValueEntered = function(newValue: number)
+						if newValue > 0 then
+							props.Settings.CustomThickness = newValue
+							props.UpdatedSettings()
+							return newValue
+						end
+						return nil
+					end,
+					LayoutOrder = 3,
+				}),
 			}),
-			BestGuess = e(ChipForToggle, {
-				Text = "Best Guess",
-				IsCurrent = current == "BestGuess",
-				LayoutOrder = 1,
-				OnClick = function()
-					props.Settings.ThicknessMode = "BestGuess"
-					props.UpdatedSettings()
-				end,
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText =
+					"How thick to make the created parts:\n" ..
+					"<b>•Best Guess</b> — Match the thickness of the selected edges' parts\n" ..
+					"<b>•One Stud</b> — Exactly 1 stud\n" ..
+					"<b>•Thinnest</b> — 0.05 studs (thinner is possible but may cause physics issues)\n" ..
+					"<b>•Custom</b> — enter a specific value",
 			}),
-			OneStud = e(ChipForToggle, {
-				Text = "One Stud",
-				IsCurrent = current == "OneStud",
-				LayoutOrder = 2,
-				OnClick = function()
-					props.Settings.ThicknessMode = "OneStud"
-					props.UpdatedSettings()
-				end,
-			}),
-		}),
-		Row2 = e("Frame", {
-			Size = UDim2.fromScale(1, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-			LayoutOrder = 2,
-		}, {
-			ListLayout = e("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 4),
-			}),
-			Thinnest = e(ChipForToggle, {
-				Text = "Thinnest",
-				IsCurrent = current == "Thinnest",
-				LayoutOrder = 1,
-				OnClick = function()
-					props.Settings.ThicknessMode = "Thinnest"
-					props.UpdatedSettings()
-				end,
-			}),
-			Custom = e(ChipForToggle, {
-				Text = "Custom",
-				IsCurrent = current == "Custom",
-				LayoutOrder = 2,
-				OnClick = function()
-					props.Settings.ThicknessMode = "Custom"
-					props.UpdatedSettings()
-				end,
-			}),
-		}),
-		CustomInput = current == "Custom" and e(NumberInput, {
-			Label = "Thickness",
-			Unit = " studs",
-			Value = props.Settings.CustomThickness,
-			ValueEntered = function(newValue: number)
-				if newValue > 0 then
-					props.Settings.CustomThickness = newValue
-					props.UpdatedSettings()
-					return newValue
-				end
-				return nil
-			end,
-			LayoutOrder = 3,
 		}),
 	})
 end
+
+local textWithBulletPoint = "• "
 
 local function StatusDisplay(props: {
 	EdgeState: "EdgeA" | "EdgeB",
