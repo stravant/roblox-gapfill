@@ -8,6 +8,7 @@ local SubPanel = require("./PluginGui/SubPanel")
 local PluginGui = require("./PluginGui/PluginGui")
 local OperationButton = require("./PluginGui/OperationButton")
 local ChipForToggle = require("./PluginGui/ChipForToggle")
+local Checkbox = require("./PluginGui/Checkbox")
 local NumberInput = require("./PluginGui/NumberInput")
 local Settings = require("./Settings")
 local PluginGuiTypes = require("./PluginGui/Types")
@@ -27,45 +28,23 @@ local function DirectionPanel(props: {
 	UpdatedSettings: () -> (),
 	LayoutOrder: number?,
 })
-	local current = props.Settings.DirectionMode
 	return e(SubPanel, {
 		Title = "Direction Override",
 		LayoutOrder = props.LayoutOrder,
 		Padding = UDim.new(0, 4),
 	}, {
-		Buttons = e(HelpGui.WithHelpIcon, {
+		Content = e(HelpGui.WithHelpIcon, {
 			LayoutOrder = 1,
-			Subject = e("Frame", {
-				Size = UDim2.fromScale(1, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				BackgroundTransparency = 1,
-			}, {
-				ListLayout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 4),
-				}),
-				Default = e(ChipForToggle, {
-					Text = "Default",
-					IsCurrent = current == "Default",
-					LayoutOrder = 1,
-					OnClick = function()
-						props.Settings.DirectionMode = "Default"
-						props.UpdatedSettings()
-					end,
-				}),
-				Opposite = e(ChipForToggle, {
-					Text = "Opposite",
-					IsCurrent = current == "Negative",
-					LayoutOrder = 2,
-					OnClick = function()
-						props.Settings.DirectionMode = "Negative"
-						props.UpdatedSettings()
-					end,
-				}),
+			Subject = e(Checkbox, {
+				Label = "Generate on other side",
+				Checked = props.Settings.FlipDirection,
+				Changed = function(newValue: boolean)
+					props.Settings.FlipDirection = newValue
+					props.UpdatedSettings()
+				end,
 			}),
 			Help = e(HelpGui.BasicTooltip, {
-				HelpRichText = "The plugin guesses which side is the \"top\" that should be flush with the edges. Choose <b>Opposite</b> to invert the choice when it guesses wrong.",
+				HelpRichText = "The plugin guesses which side of the edges is the \"top\" that should be flush with the generation result. Check this to invert the choice when it guesses wrong.",
 			}),
 		}),
 	})
@@ -153,28 +132,33 @@ local function ThicknessPanel(props: {
 						end,
 					}),
 				}),
-				CustomInput = current == "Custom" and e(NumberInput, {
-					Label = "Thickness",
-					Unit = " studs",
-					Value = props.Settings.CustomThickness,
-					ValueEntered = function(newValue: number)
-						if newValue > 0 then
-							props.Settings.CustomThickness = newValue
-							props.UpdatedSettings()
-							return newValue
-						end
-						return nil
-					end,
-					LayoutOrder = 3,
-				}),
 			}),
 			Help = e(HelpGui.BasicTooltip, {
 				HelpRichText =
 					"How thick to make the created parts:\n" ..
-					"<b>•Best Guess</b> — Match the thickness of the selected edges' parts\n" ..
-					"<b>•One Stud</b> — Exactly 1 stud\n" ..
-					"<b>•Thinnest</b> — 0.05 studs (thinner is possible but may cause physics issues)\n" ..
-					"<b>•Custom</b> — enter a specific value",
+					"<b>•Best Guess</b> — Match the thickness of parts adjacent to the edges.\n" ..
+					"<b>•One Stud</b> — Exactly 1 stud.\n" ..
+					"<b>•Thinnest</b> — 0.05 studs (thinner is possible but may cause physics issues).\n" ..
+					"<b>•Custom</b> — enter a specific value below.",
+			}),
+		}),
+		CustomInput = current == "Custom" and e(HelpGui.WithHelpIcon, {
+			LayoutOrder = 2,
+			Subject = e(NumberInput, {
+				Label = "Thickness",
+				Unit = " studs",
+				Value = props.Settings.CustomThickness,
+				ValueEntered = function(newValue: number)
+					if newValue > 0 then
+						props.Settings.CustomThickness = newValue
+						props.UpdatedSettings()
+						return newValue
+					end
+					return nil
+				end,
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText = "The thickness in studs for the created parts. Must be greater than 0.",
 			}),
 		}),
 	})
@@ -284,12 +268,12 @@ local function GapFillGui(props: {
 			EdgeState = props.EdgeState,
 			LayoutOrder = nextOrder(),
 		}),
-		DirectionPanel = e(DirectionPanel, {
+		ThicknessPanel = e(ThicknessPanel, {
 			Settings = props.CurrentSettings,
 			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
-		ThicknessPanel = e(ThicknessPanel, {
+		DirectionPanel = e(DirectionPanel, {
 			Settings = props.CurrentSettings,
 			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),

@@ -217,7 +217,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 	end
 
 	local function getForceFactor(): number
-		if currentSettings.DirectionMode == "Negative" then
+		if currentSettings.FlipDirection then
 			return -1
 		else
 			return 1
