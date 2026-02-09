@@ -1,5 +1,5 @@
 -- Use the toolbar combiner?
-local COMBINE_TOOLBAR = true
+local COMBINE_TOOLBAR = false
 
 local createSharedToolbar = require(script.Parent.Packages.createSharedToolbar)
 local Signal = require(script.Parent.Packages.Signal)
