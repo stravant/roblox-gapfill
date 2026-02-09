@@ -125,29 +125,56 @@ function HelpGui.WithHelpIcon(props: {
 	})
 end
 
-function HelpGui.BasicTooltip(props: {
-	HelpRichText: string,
+HelpGui.BasicTooltip = React.memo(function(props: {
+	HelpRichText: string?,
+	HelpImage: string?,
+	HelpImageAspectRatio: number?,
 	LayoutOrder: number?,
-})
-	return e("TextLabel", {
+}): React.ReactNode
+	local hasText = props.HelpRichText ~= nil
+	local hasImage = props.HelpImage ~= nil
+
+	-- Text-only: use a simple TextLabel (original behavior)
+	if hasText and not hasImage then
+		return e("TextLabel", {
+			Size = UDim2.fromOffset(200, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = BLACK,
+			TextColor3 = WHITE,
+			RichText = true,
+			Text = props.HelpRichText,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = Enum.Font.SourceSans,
+			TextSize = 16,
+			LayoutOrder = props.LayoutOrder,
+		}, {
+			Padding = e("UIPadding", {
+				PaddingBottom = UDim.new(0, 10),
+				PaddingTop = UDim.new(0, 10),
+				PaddingLeft = UDim.new(0, 12),
+				PaddingRight = UDim.new(0, 12),
+			}),
+			Corner = e("UICorner", {
+				CornerRadius = UDim.new(0, 8),
+			}),
+			Stroke = e("UIStroke", {
+				Color = DARK_RED,
+				Thickness = 2,
+				ZIndex = 2,
+				BorderOffset = UDim.new(0, -6),
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+		})
+	end
+
+	-- Image-only or text+image: use a Frame container
+	return e("Frame", {
 		Size = UDim2.fromOffset(200, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = BLACK,
-		TextColor3 = WHITE,
-		RichText = true,
-		Text = props.HelpRichText,
-		TextWrapped = true,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Font = Enum.Font.SourceSans,
-		TextSize = 16,
 		LayoutOrder = props.LayoutOrder,
 	}, {
-		Padding = e("UIPadding", {
-			PaddingBottom = UDim.new(0, 10),
-			PaddingTop = UDim.new(0, 10),
-			PaddingLeft = UDim.new(0, 12),
-			PaddingRight = UDim.new(0, 12),
-		}),
 		Corner = e("UICorner", {
 			CornerRadius = UDim.new(0, 8),
 		}),
@@ -158,8 +185,39 @@ function HelpGui.BasicTooltip(props: {
 			BorderOffset = UDim.new(0, -6),
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
+		Padding = e("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingTop = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 12),
+			PaddingRight = UDim.new(0, 12),
+		}),
+		Layout = e("UIListLayout", {
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 8),
+		}),
+		Label = hasText and e("TextLabel", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			TextColor3 = WHITE,
+			RichText = true,
+			Text = props.HelpRichText,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = Enum.Font.SourceSans,
+			TextSize = 16,
+			LayoutOrder = 1,
+		}),
+		Image = hasImage and e("ImageLabel", {
+			Size = UDim2.new(1, 0, 1 / (props.HelpImageAspectRatio or 2), 0),
+			SizeConstraint = Enum.SizeConstraint.RelativeXX,
+			BackgroundTransparency = 1,
+			Image = props.HelpImage,
+			ScaleType = Enum.ScaleType.Stretch,
+			LayoutOrder = 2,
+		}),
 	})
-end
+end)
 
 function HelpGui.HelpDisplay(props: {
 	Panelized: boolean,

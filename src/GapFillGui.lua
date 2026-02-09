@@ -44,7 +44,9 @@ local function DirectionPanel(props: {
 				end,
 			}),
 			Help = e(HelpGui.BasicTooltip, {
-				HelpRichText = "The plugin guesses which side of the edges is the \"top\" that should be flush with the generation result. Check this to invert the choice when it guesses wrong.",
+				HelpRichText = "GapFill tries to make the generated parts flush with the the adjacent surfaces. Force the generated parts the other way if GapFill guessed wrong.",
+				HelpImage = "rbxassetid://119701792475192",
+				HelpImageAspectRatio = 1.9,
 			}),
 		}),
 	})
