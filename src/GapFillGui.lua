@@ -180,8 +180,6 @@ local function ThicknessPanel(props: {
 	})
 end
 
-local textWithBulletPoint = "• "
-
 local function StatusDisplay(props: {
 	EdgeState: "EdgeA" | "EdgeB",
 	LayoutOrder: number?,
