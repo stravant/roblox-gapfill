@@ -5,9 +5,10 @@ local PluginGuiTypes = require("./PluginGui/Types")
 
 export type GapFillSettings = PluginGuiTypes.PluginGuiSettings & {
 	FlipDirection: boolean,
-	ThicknessMode: "BestGuess" | "OneStud" | "Custom" | "Thinnest",
+	ThicknessMode: "BestGuess" | "OneStud" | "Custom" | "Thinnest" | "Plate",
 	CustomThickness: number,
 	UnionResults: boolean,
+	ClassicUI: boolean,
 }
 
 local function loadSettings(plugin: Plugin): GapFillSettings
@@ -31,6 +32,7 @@ local function loadSettings(plugin: Plugin): GapFillSettings
 		ThicknessMode = if raw.ThicknessMode ~= nil then raw.ThicknessMode else "BestGuess",
 		CustomThickness = if raw.CustomThickness ~= nil then raw.CustomThickness else 0.2,
 		UnionResults = if raw.UnionResults ~= nil then raw.UnionResults else false,
+		ClassicUI = if raw.ClassicUI ~= nil then raw.ClassicUI else false,
 	}
 end
 local function saveSettings(plugin: Plugin, settings: GapFillSettings)
@@ -49,6 +51,7 @@ local function saveSettings(plugin: Plugin, settings: GapFillSettings)
 		ThicknessMode = settings.ThicknessMode,
 		CustomThickness = settings.CustomThickness,
 		UnionResults = settings.UnionResults,
+		ClassicUI = settings.ClassicUI,
 	})
 end
 

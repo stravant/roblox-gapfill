@@ -210,6 +210,8 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 			return 1
 		elseif currentSettings.ThicknessMode == "Custom" then
 			return currentSettings.CustomThickness
+		elseif currentSettings.ThicknessMode == "Plate" then
+			return 0.2
 		elseif currentSettings.ThicknessMode == "Thinnest" then
 			return 0.05
 		else

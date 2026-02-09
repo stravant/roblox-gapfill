@@ -115,21 +115,21 @@ local function ThicknessPanel(props: {
 						SortOrder = Enum.SortOrder.LayoutOrder,
 						Padding = UDim.new(0, 4),
 					}),
-					Thinnest = e(ChipForToggle, {
-						Text = "Thinnest",
-						IsCurrent = current == "Thinnest",
-						LayoutOrder = 1,
-						OnClick = function()
-							props.Settings.ThicknessMode = "Thinnest"
-							props.UpdatedSettings()
-						end,
-					}),
 					Custom = e(ChipForToggle, {
 						Text = "Custom",
 						IsCurrent = current == "Custom",
-						LayoutOrder = 2,
+						LayoutOrder = 1,
 						OnClick = function()
 							props.Settings.ThicknessMode = "Custom"
+							props.UpdatedSettings()
+						end,
+					}),
+					Thinnest = e(ChipForToggle, {
+						Text = "Thinnest",
+						IsCurrent = current == "Thinnest",
+						LayoutOrder = 2,
+						OnClick = function()
+							props.Settings.ThicknessMode = "Thinnest"
 							props.UpdatedSettings()
 						end,
 					}),
@@ -211,6 +211,20 @@ local function OptionsPanel(props: {
 		Warning = props.Settings.UnionResults and e(UnionIsExpensiveWarning, {
 			LayoutOrder = 2,
 		}),
+		ClassicUI = e(HelpGui.WithHelpIcon, {
+			LayoutOrder = 3,
+			Subject = e(Checkbox, {
+				Label = "Classic UI style",
+				Checked = props.Settings.ClassicUI,
+				Changed = function(newValue: boolean)
+					props.Settings.ClassicUI = newValue
+					props.UpdatedSettings()
+				end,
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText = "Switch to something more similar to the classic GapFill UI.",
+			}),
+		}),
 	})
 end
 
@@ -219,8 +233,8 @@ local function StatusDisplay(props: {
 	LayoutOrder: number?,
 })
 	local text = if props.EdgeState == "EdgeA"
-		then "Select first edge of gap to fill the space between."
-		else "Select second edge, or click empty space to cancel."
+		then "Select the first edge of a gap to fill the space between."
+		else "Select second edge of the gap, or click empty space to cancel."
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
@@ -289,6 +303,75 @@ local function CloseButton(props: {
 	})
 end
 
+local function ClassicThicknessPanel(props: {
+	Settings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	LayoutOrder: number?,
+})
+	local current = props.Settings.ThicknessMode
+	local function makeButton(mode: typeof(props.Settings.ThicknessMode), label: string, subText: string, layoutOrder: number)
+		local isCurrent = current == mode
+		return e(OperationButton, {
+			Text = label,
+			SubText = subText,
+			Color = if isCurrent then Colors.DARK_RED else Colors.GREY,
+			Disabled = false,
+			Height = 32,
+			LayoutOrder = layoutOrder,
+			OnClick = function()
+				props.Settings.ThicknessMode = mode
+				props.UpdatedSettings()
+			end,
+		})
+	end
+	return e(SubPanel, {
+		Title = "Created Part Thickness",
+		LayoutOrder = props.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, {
+		BestGuess = makeButton("BestGuess", "Best Guess", "match adjacent parts", 1),
+		OneStud = makeButton("OneStud", "One Stud", "1.0 studs", 2),
+		Plate = makeButton("Plate", "Plate", "0.2 studs", 3),
+		Thinnest = makeButton("Thinnest", "Thinnest", "0.05 studs", 4),
+	})
+end
+
+local function ClassicDirectionPanel(props: {
+	Settings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	LayoutOrder: number?,
+})
+	local flipped = props.Settings.FlipDirection
+	return e(SubPanel, {
+		Title = "Direction Override",
+		LayoutOrder = props.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, {
+		Default = e(OperationButton, {
+			Text = "Default",
+			Color = if not flipped then Colors.DARK_RED else Colors.GREY,
+			Disabled = false,
+			Height = 32,
+			LayoutOrder = 1,
+			OnClick = function()
+				props.Settings.FlipDirection = false
+				props.UpdatedSettings()
+			end,
+		}),
+		Opposite = e(OperationButton, {
+			Text = "Opposite",
+			Color = if flipped then Colors.DARK_RED else Colors.GREY,
+			Disabled = false,
+			Height = 32,
+			LayoutOrder = 2,
+			OnClick = function()
+				props.Settings.FlipDirection = true
+				props.UpdatedSettings()
+			end,
+		}),
+	})
+end
+
 local GAPFILL_CONFIG: PluginGuiTypes.PluginGuiConfig = {
 	PluginName = "GapFill",
 	PendingText = "...",
@@ -315,7 +398,33 @@ local function GapFillGui(props: {
 			HandleAction = props.HandleAction,
 			Panelized = props.Panelized,
 		},
-	}, {
+	}, if currentSettings.ClassicUI then {
+		ClassicDirectionPanel = e(ClassicDirectionPanel, {
+			Settings = currentSettings,
+			UpdatedSettings = updatedSettings,
+			LayoutOrder = nextOrder(),
+		}),
+		ClassicThicknessPanel = e(ClassicThicknessPanel, {
+			Settings = currentSettings,
+			UpdatedSettings = updatedSettings,
+			LayoutOrder = nextOrder(),
+		}),
+		OptionsPanel = 	e(SubPanel, {
+			Title = "Advanced Options",
+			LayoutOrder = nextOrder(),
+			Padding = UDim.new(0, 4),
+		}, {
+			ReturnToNewUI = e(Checkbox, {
+				LayoutOrder = nextOrder(),
+				Label = "Classic UI style",
+				Checked = currentSettings.ClassicUI,
+				Changed = function(newValue: boolean)
+					currentSettings.ClassicUI = newValue
+					props.UpdatedSettings()
+				end,
+			}),
+		})
+	} else {
 		-- Only show the status for new users who haven't disabled the help
 		StatusDisplay = currentSettings.HaveHelp and e(StatusDisplay, {
 			EdgeState = props.EdgeState,
