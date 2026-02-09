@@ -77,7 +77,7 @@ return function(t: TestContext)
 
 		local created = collectCreatedParts(workspace, function()
 			local result = doFill(edgeA, edgeB, 1, nil, 1)
-			t.expect(result).toBe(true)
+			t.expect(result ~= nil).toBe(true)
 		end)
 
 		t.expect(#created > 0).toBe(true)
@@ -229,7 +229,7 @@ return function(t: TestContext)
 
 		local created = collectCreatedParts(workspace, function()
 			local result = doFill(edgeA, edgeB, 1, 0.1, 1)
-			t.expect(result).toBe(true)
+			t.expect(result ~= nil).toBe(true)
 		end)
 
 		-- Should create wedge parts for the triangle
@@ -267,7 +267,7 @@ return function(t: TestContext)
 
 		local created = collectCreatedParts(workspace, function()
 			local result = doFill(edgeA, edgeB, 1, 0.1, 1)
-			t.expect(result).toBe(true)
+			t.expect(result ~= nil).toBe(true)
 		end)
 
 		local wedgeCount = 0
@@ -306,7 +306,7 @@ return function(t: TestContext)
 
 		local created = collectCreatedParts(workspace, function()
 			local result = doFill(edgeA, edgeB, 1, 0.1, 1)
-			t.expect(result).toBe(true)
+			t.expect(result ~= nil).toBe(true)
 		end)
 
 		local wedgeCount = 0
@@ -605,7 +605,7 @@ return function(t: TestContext)
 
 		local created = collectCreatedParts(workspace, function()
 			local result = doFill(edgeA, edgeB, 1, 0.1, 1)
-			t.expect(result).toBe(true)
+			t.expect(result ~= nil).toBe(true)
 		end)
 
 		t.expect(#created > 0).toBe(true)
@@ -739,7 +739,7 @@ return function(t: TestContext)
 
 		local created = collectCreatedParts(workspace, function()
 			local result = doFill(edgeA, edgeB, 1, 0.1, 1)
-			t.expect(result).toBe(true)
+			t.expect(result ~= nil).toBe(true)
 		end)
 
 		t.expect(#created > 0).toBe(true)

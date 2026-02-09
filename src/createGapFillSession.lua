@@ -12,6 +12,7 @@ local DraggerHandler = require(Packages.DraggerHandler)
 local Signal = require(Packages.Signal)
 
 local doFill = require(Src.doFill)
+local copyPartProps = require(Src.copyPartProps)
 local Settings = require("./Settings")
 
 type GeometryEdge = typeof(Geometry.getGeometry(...).edges[1])
@@ -224,6 +225,28 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 		end
 	end
 
+	local function tryUnionParts(parts: { BasePart }?)
+		if not parts or #parts < 2 or not currentSettings.UnionResults then
+			return
+		end
+		local first = parts[1]
+		local rest = {}
+		for i = 2, #parts do
+			table.insert(rest, parts[i])
+		end
+		local ok, union = pcall(function()
+			return first:UnionAsync(rest)
+		end)
+		if ok and union then
+			union.Parent = first.Parent
+			union.UsePartColor = true
+			copyPartProps(first, union)
+			for _, part in parts do
+				part:Destroy()
+			end
+		end
+	end
+
 	local isOverUI = false
 	local function updateHover()
 		if isOverUI or draggerHandler:isEnabled() then
@@ -307,7 +330,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[4],
 							b = theFace.vertices[3],
 						}
-						doFill(edge1, edge2, -1, thicknessOverride, forceFactor)
+						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor))
 					elseif #theFace.vertices == 3 then
 						local edge1 = prepEdge{
 							a = theFace.vertices[1],
@@ -317,11 +340,11 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[1],
 							b = theFace.vertices[3],
 						}
-						doFill(edge1, edge2, -1, thicknessOverride, forceFactor)
+						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor))
 					end
 				else
 					-- Different parts — normal fill
-					doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor)
+					tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor))
 				end
 
 				if recording then

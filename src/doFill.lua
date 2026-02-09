@@ -52,7 +52,10 @@ local function getPoints(part)
 end
 
 -- Calculate the result
-local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessOverride: number?, forceFactor: number)
+-- Returns the list of created parts on success, or nil on failure
+local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessOverride: number?, forceFactor: number): { BasePart }?
+	local createdParts: { BasePart } = {}
+
 	local function fill(a, b, c, normalHint)
 		--[[       edg1
 			A ------|------>B  --.
@@ -72,8 +75,8 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		local edg2 = math.abs(0.5 + e2)
 		local edg3 = math.abs(0.5 + e3)
 		-- Idea: Find the edge onto which the vertex opposite that
-		-- edge has the projection closest to 1/2 of the way along that 
-		-- edge. That is the edge thatwe want to split on in order to 
+		-- edge has the projection closest to 1/2 of the way along that
+		-- edge. That is the edge thatwe want to split on in order to
 		-- avoid ending up with small "sliver" triangles with one very
 		-- small dimension relative to the other one.
 		if math.abs(e1) > 0.0001 and math.abs(e2) > 0.0001 and math.abs(e3) > 0.0001 then
@@ -189,11 +192,13 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			setPartSizeWithMeshIfNeeded(part1, Enum.MeshType.Wedge, depth, width, len1)
 			part1.CFrame = maincf*CFrame.Angles(math.pi, 0, math.pi/2)*CFrame.new(flip*(-depth/2), width/2, len1/2)
 			part1.Parent = parent
+			table.insert(createdParts, part1)
 		end
 		if len2 > 0.001 then
 			setPartSizeWithMeshIfNeeded(part2, Enum.MeshType.Wedge, depth, width, len2)
 			part2.CFrame = maincf*CFrame.Angles(math.pi, math.pi, -math.pi/2)*CFrame.new(flip*(depth/2), width/2, -len1 - len2/2)
 			part2.Parent = parent
+			table.insert(createdParts, part2)
 		end
 		return normal*flip
 	end
@@ -284,7 +289,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			normal = normal * extrudeDirectionModifier
 
 			local thickness = thicknessOverride or maxDepth
-			
+
 			local position = point + axis*((axisMin + axisMax)/2) + perpDir*(perpLen/2) + normal*(thickness/2)
 			local size = Vector3.new(perpLen, thickness, (axisMax - axisMin))
 			local cf = CFrameFromTopBack(position, normal, axis)
@@ -302,6 +307,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			copyPartProps(edgeA.part, part)
 			setPartSizeWithMeshIfNeeded(part, Enum.MeshType.Brick, size.X, size.Y, size.Z)
 			part.CFrame = cf
+			table.insert(createdParts, part)
 		end
 	else
 		-- Case 2) Rays are not parallel, we
@@ -315,7 +321,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		local lenA, lenB = closest(extA, dirA, extB, dirB)
 		if not lenA or not lenB then
 			warn("Failed to GapFill")
-			return
+			return nil
 		end
 
 		if close(extA + dirA*lenA, extB + dirB*lenB) then
@@ -345,7 +351,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 				fill(pointA, pointB, pointC)
 
 			elseif (lenA < -0.01 or lenA > edgeA.length + 0.01) and (lenB < -0.01 or lenB > edgeB.length + 0.01) then
-				-- The intersection is outside of both edges. 
+				-- The intersection is outside of both edges.
 				-- In this case we need to use multiple triangles
 				if lenA*lenB > 0 then
 					fill(extA, endA, endB)
@@ -414,7 +420,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			end
 		end
 	end
-	return true
+	return createdParts
 end
 
 return doFill

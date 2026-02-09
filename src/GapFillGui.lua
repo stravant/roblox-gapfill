@@ -166,6 +166,54 @@ local function ThicknessPanel(props: {
 	})
 end
 
+local function UnionIsExpensiveWarning(props: {
+	LayoutOrder: number?,
+})
+	return e("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Text = "⚠️Filling using Unions instead of Wedges makes textures line up better but has performance costs, use with caution!",
+		TextColor3 = Colors.WARNING_YELLOW,
+		TextWrapped = true,
+		Font = Enum.Font.SourceSansBold,
+		TextSize = 13,
+		LayoutOrder = props.LayoutOrder,
+	})
+end
+
+local function OptionsPanel(props: {
+	Settings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	LayoutOrder: number?,
+})
+	return e(SubPanel, {
+		Title = "Advanced Options",
+		LayoutOrder = props.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, {
+		UnionResults = e(HelpGui.WithHelpIcon, {
+			LayoutOrder = 1,
+			Subject = e(Checkbox, {
+				Label = "Union results",
+				Checked = props.Settings.UnionResults,
+				Changed = function(newValue: boolean)
+					props.Settings.UnionResults = newValue
+					props.UpdatedSettings()
+				end,
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText =
+					"When the fill requires more than one part, union the fill parts together into a single CSG part.\n" ..
+					"<font color='#F5762A'>⚠️Loading unions has a significant upfront cost, so you must use many copies of a given union or need clean texturing to make that cost worth it over using separate wedges.</font>",
+			}),
+		}),
+		Warning = props.Settings.UnionResults and e(UnionIsExpensiveWarning, {
+			LayoutOrder = 2,
+		}),
+	})
+end
+
 local function StatusDisplay(props: {
 	EdgeState: "EdgeA" | "EdgeB",
 	LayoutOrder: number?,
@@ -279,6 +327,11 @@ local function GapFillGui(props: {
 			LayoutOrder = nextOrder(),
 		}),
 		DirectionPanel = e(DirectionPanel, {
+			Settings = currentSettings,
+			UpdatedSettings = updatedSettings,
+			LayoutOrder = nextOrder(),
+		}),
+		OptionsPanel = e(OptionsPanel, {
 			Settings = currentSettings,
 			UpdatedSettings = updatedSettings,
 			LayoutOrder = nextOrder(),
