@@ -255,29 +255,32 @@ local function GapFillGui(props: {
 	Panelized: boolean,
 	EdgeState: "EdgeA" | "EdgeB",
 })
+	local currentSettings = props.CurrentSettings
+	local updatedSettings = props.UpdatedSettings
 	local nextOrder = createNextOrder()
 	return e(PluginGui, {
 		Config = GAPFILL_CONFIG,
 		State = {
 			Mode = props.GuiState,
-			Settings = props.CurrentSettings,
-			UpdatedSettings = props.UpdatedSettings,
+			Settings = currentSettings,
+			UpdatedSettings = updatedSettings,
 			HandleAction = props.HandleAction,
 			Panelized = props.Panelized,
 		},
 	}, {
-		StatusDisplay = e(StatusDisplay, {
+		-- Only show the status for new users who haven't disabled the help
+		StatusDisplay = currentSettings.HaveHelp and e(StatusDisplay, {
 			EdgeState = props.EdgeState,
 			LayoutOrder = nextOrder(),
 		}),
 		ThicknessPanel = e(ThicknessPanel, {
-			Settings = props.CurrentSettings,
-			UpdatedSettings = props.UpdatedSettings,
+			Settings = currentSettings,
+			UpdatedSettings = updatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
 		DirectionPanel = e(DirectionPanel, {
-			Settings = props.CurrentSettings,
-			UpdatedSettings = props.UpdatedSettings,
+			Settings = currentSettings,
+			UpdatedSettings = updatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
 		CloseButton = e(CloseButton, {
