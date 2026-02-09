@@ -163,7 +163,8 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		else
 			parent = workspace
 		end
-		local part1 = Instance.new('WedgePart')
+		local part1 = Instance.new('Part')
+		part1.Shape = Enum.PartType.Wedge
 		part1.TopSurface    = Enum.SurfaceType.Smooth
 		part1.BottomSurface = Enum.SurfaceType.Smooth
 		copyPartProps(edgeA.part, part1)
