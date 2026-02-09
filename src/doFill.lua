@@ -5,18 +5,12 @@ local Geometry = require(Packages.Geometry)
 
 local copyPartProps = require(script.Parent.copyPartProps)
 
+-- Mesh no longer needed because min part size is now 0.001 which you would
+-- realistically have problems going smaller than anyways. This was historically
+-- needed back when min part size was 0.05 and you frequently did need to go
+-- smaller than that using a SpecialMesh.
 local function setPartSizeWithMeshIfNeeded(part, meshType: Enum.MeshType, a, b, c)
-	local possibleA = math.max(a, 0.05)
-	local possibleB = math.max(b, 0.05)
-	local possibleC = math.max(c, 0.05)
-	part.Size = Vector3.new(possibleA, possibleB, possibleC)
-	if possibleA == a and possibleB == b and possibleC == c then
-		-- No mesh needed
-		return
-	end
-	local mesh = Instance.new('SpecialMesh', part)
-	mesh.MeshType = meshType
-	mesh.Scale = Vector3.new(a / possibleA, b / possibleB, c / possibleC)
+	part.Size = Vector3.new(a, b, c)
 end
 
 function CFrameFromTopBack(at, top, back)
