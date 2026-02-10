@@ -1,6 +1,9 @@
+local CoreGui = game:GetService("CoreGui")
+
 local Plugin = script.Parent.Parent
 local Packages = Plugin.Packages
 local React = require(Packages.React)
+local ReactRoblox = require(Packages.ReactRoblox)
 
 local Colors = require("./PluginGui/Colors")
 local HelpGui = require("./PluginGui/HelpGui")
@@ -12,6 +15,7 @@ local Checkbox = require("./PluginGui/Checkbox")
 local NumberInput = require("./PluginGui/NumberInput")
 local Settings = require("./Settings")
 local PluginGuiTypes = require("./PluginGui/Types")
+local EdgeArrow = require("./EdgeArrow")
 
 local e = React.createElement
 
@@ -372,44 +376,53 @@ local function ClassicDirectionPanel(props: {
 	})
 end
 
-local GAPFILL_CONFIG: PluginGuiTypes.PluginGuiConfig = {
-	PluginName = "GapFill",
-	PendingText = "...",
-	TutorialElement = nil,
-}
+local adornFolder = Instance.new("Folder")
+adornFolder.Name = "$GapFillAdornments"
+adornFolder.Archivable = false
+adornFolder.Parent = CoreGui
 
-local function GapFillGui(props: {
-	GuiState: PluginGuiTypes.PluginGuiMode,
-	CurrentSettings: Settings.GapFillSettings,
-	UpdatedSettings: () -> (),
-	HandleAction: (string) -> (),
-	Panelized: boolean,
+local function AdornmentOverlay(props: {
+	HoverEdge: EdgeArrow.EdgeData?,
+	SelectedEdge: EdgeArrow.EdgeData?,
 	EdgeState: "EdgeA" | "EdgeB",
 })
+	local children: { [string]: any } = {}
+	if props.SelectedEdge then
+		children.SelectedEdge = e(EdgeArrow, {
+			Edge = props.SelectedEdge,
+			Color = Color3.new(1, 0, 0),
+			ZIndexOffset = 0,
+		})
+	end
+	if props.HoverEdge then
+		local hoverColor = if props.EdgeState == "EdgeA" then Color3.new(1, 0, 0) else Color3.new(0, 0, 1)
+		children.HoverEdge = e(EdgeArrow, {
+			Edge = props.HoverEdge,
+			Color = hoverColor,
+			ZIndexOffset = 2,
+		})
+	end
+	return ReactRoblox.createPortal(children, adornFolder)
+end
+
+local function ClassicContent(props: {
+	CurrentSettings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+})
 	local currentSettings = props.CurrentSettings
-	local updatedSettings = props.UpdatedSettings
 	local nextOrder = createNextOrder()
-	return e(PluginGui, {
-		Config = GAPFILL_CONFIG,
-		State = {
-			Mode = props.GuiState,
-			Settings = currentSettings,
-			UpdatedSettings = updatedSettings,
-			HandleAction = props.HandleAction,
-			Panelized = props.Panelized,
-		},
-	}, if currentSettings.ClassicUI then {
+	return React.createElement(React.Fragment, nil, {
 		ClassicDirectionPanel = e(ClassicDirectionPanel, {
 			Settings = currentSettings,
-			UpdatedSettings = updatedSettings,
+			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
 		ClassicThicknessPanel = e(ClassicThicknessPanel, {
 			Settings = currentSettings,
-			UpdatedSettings = updatedSettings,
+			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
-		OptionsPanel = 	e(SubPanel, {
+		OptionsPanel = e(SubPanel, {
 			Title = "Advanced Options",
 			LayoutOrder = nextOrder(),
 			Padding = UDim.new(0, 4),
@@ -423,8 +436,19 @@ local function GapFillGui(props: {
 					props.UpdatedSettings()
 				end,
 			}),
-		})
-	} else {
+		}),
+	})
+end
+
+local function ModernContent(props: {
+	CurrentSettings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	HandleAction: (string) -> (),
+	EdgeState: "EdgeA" | "EdgeB",
+})
+	local currentSettings = props.CurrentSettings
+	local nextOrder = createNextOrder()
+	return React.createElement(React.Fragment, nil, {
 		-- Only show the status for new users who haven't disabled the help
 		StatusDisplay = currentSettings.HaveHelp and e(StatusDisplay, {
 			EdgeState = props.EdgeState,
@@ -432,23 +456,69 @@ local function GapFillGui(props: {
 		}),
 		ThicknessPanel = e(ThicknessPanel, {
 			Settings = currentSettings,
-			UpdatedSettings = updatedSettings,
+			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
 		DirectionPanel = e(DirectionPanel, {
 			Settings = currentSettings,
-			UpdatedSettings = updatedSettings,
+			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
 		OptionsPanel = e(OptionsPanel, {
 			Settings = currentSettings,
-			UpdatedSettings = updatedSettings,
+			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
 		CloseButton = e(CloseButton, {
 			HandleAction = props.HandleAction,
 			LayoutOrder = nextOrder(),
 		}),
+	})
+end
+
+local GAPFILL_CONFIG: PluginGuiTypes.PluginGuiConfig = {
+	PluginName = "GapFill",
+	PendingText = "...",
+	TutorialElement = nil,
+}
+
+local function GapFillGui(props: {
+	GuiState: PluginGuiTypes.PluginGuiMode,
+	CurrentSettings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	HandleAction: (string) -> (),
+	Panelized: boolean,
+	EdgeState: "EdgeA" | "EdgeB",
+	HoverEdge: EdgeArrow.EdgeData?,
+	SelectedEdge: EdgeArrow.EdgeData?,
+})
+	local currentSettings = props.CurrentSettings
+	return e(PluginGui, {
+		Config = GAPFILL_CONFIG,
+		State = {
+			Mode = props.GuiState,
+			Settings = currentSettings,
+			UpdatedSettings = props.UpdatedSettings,
+			HandleAction = props.HandleAction,
+			Panelized = props.Panelized,
+		},
+	}, {
+		AdornmentOverlay = e(AdornmentOverlay, {
+			HoverEdge = props.HoverEdge,
+			SelectedEdge = props.SelectedEdge,
+			EdgeState = props.EdgeState,
+		}),
+		Content = if currentSettings.ClassicUI
+			then e(ClassicContent, {
+				CurrentSettings = currentSettings,
+				UpdatedSettings = props.UpdatedSettings,
+			})
+			else e(ModernContent, {
+				CurrentSettings = currentSettings,
+				UpdatedSettings = props.UpdatedSettings,
+				HandleAction = props.HandleAction,
+				EdgeState = props.EdgeState,
+			}),
 	})
 end
 

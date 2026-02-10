@@ -1,6 +1,5 @@
 --!strict
 
-local CoreGui = game:GetService("CoreGui")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -14,6 +13,7 @@ local Signal = require(Packages.Signal)
 local doFill = require(Src.doFill)
 local copyPartProps = require(Src.copyPartProps)
 local Settings = require("./Settings")
+local EdgeArrow = require("./EdgeArrow")
 
 type GeometryEdge = typeof(Geometry.getGeometry(...).edges[1])
 type GeometryEdgeWithClick = GeometryEdge & {
@@ -25,52 +25,6 @@ local function edgeWithClick(edge: GeometryEdge, click: Vector3): GeometryEdgeWi
 	local withClick = (edge :: any) :: GeometryEdgeWithClick
 	withClick.click = click
 	return withClick
-end
-
-local function drawFace(parent: Instance, face: any, color: Color3, trans: number, zmod: number): { Instance }
-	local scale = math.max(face.vertexMargin or 0, 0.15) / 8
-	if scale > 0.2 then
-		scale = 0.2
-	end
-
-	local segmentCFrame = CFrame.new(face.a, face.b) * CFrame.new(0, 0, -face.length/2)
-	local tipLength = math.min(0.3 * face.length, scale * 15)
-	local tipRadius = 0.5 * tipLength
-	local shaftRadius = 0.5 * 0.5 * math.min(0.3 * face.length, scale * 7)
-
-	local line = Instance.new('CylinderHandleAdornment')
-	line.CFrame = segmentCFrame * CFrame.new(0, 0, tipLength/2) * CFrame.Angles(0, 0, math.pi/2)
-	line.Adornee = workspace.Terrain
-	line.ZIndex = 0 + zmod
-	line.Height = face.length - tipLength
-	line.Radius = shaftRadius
-	line.Color3 = color
-	line.Transparency = trans
-	line.Parent = parent
-	line.AlwaysOnTop = false
-
-	local lineOnTop = line:Clone()
-	lineOnTop.Parent = parent
-	lineOnTop.Transparency = 0.7
-	lineOnTop.AlwaysOnTop = true
-
-	local head = Instance.new('ConeHandleAdornment')
-	head.CFrame = segmentCFrame * CFrame.new(0, 0, -(face.length/2 - tipLength)) * CFrame.Angles(0, 0, math.pi/2)
-	head.Adornee = workspace.Terrain
-	head.ZIndex = 1 + zmod
-	head.Height = tipLength
-	head.Radius = tipRadius
-	head.Color3 = color
-	head.Transparency = trans
-	head.Parent = parent
-	head.AlwaysOnTop = false
-
-	local headOnTop = head:Clone()
-	headOnTop.Parent = parent
-	headOnTop.Transparency = 0.7
-	headOnTop.AlwaysOnTop = true
-
-	return {line, head, lineOnTop, headOnTop}
 end
 
 local function getHoverEdgeSimple(hit: RaycastResult): (GeometryEdgeWithClick?, GeometryFace?)
@@ -147,6 +101,16 @@ local function commitRecording(id: string)
 	ChangeHistoryService:FinishRecording(id, Enum.FinishRecordingOperation.Commit)
 end
 
+local function edgesMatch(a: EdgeArrow.EdgeData?, b: EdgeArrow.EdgeData?): boolean
+	if a == nil and b == nil then
+		return true
+	end
+	if a == nil or b == nil then
+		return false
+	end
+	return a.a == b.a and a.b == b.b
+end
+
 local function createGapFillSession(plugin: Plugin, currentSettings: Settings.GapFillSettings)
 	local session = {}
 	local changeSignal = Signal.new()
@@ -155,49 +119,22 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 
 	local mState: "EdgeA" | "EdgeB" = "EdgeA"
 	local mEdgeA: any = nil
-	local mEdgeADrawn: { Instance }? = nil
-
-	local adornFolder = Instance.new("Folder")
-	adornFolder.Name = "$GapFillAdornments"
-	adornFolder.Archivable = false
-	adornFolder.Parent = CoreGui
-
-	-- Hover display
-	local mHoverFaceDrawn: { Instance } = {}
-	local function showHoverEdge(face: any)
-		for _, ch in pairs(mHoverFaceDrawn) do
-			ch:Destroy()
-		end
-		mHoverFaceDrawn = {}
-		local color = if mState == "EdgeA" then Color3.new(1, 0, 0) else Color3.new(0, 0, 1)
-		mHoverFaceDrawn = drawFace(adornFolder, face, color, 0, 2)
-	end
-	local function hideHoverEdge()
-		for _, ch in pairs(mHoverFaceDrawn) do
-			ch:Destroy()
-		end
-		mHoverFaceDrawn = {}
-	end
+	local mHoverEdge: EdgeArrow.EdgeData? = nil
 
 	local function clearEdgeA()
-		if mEdgeADrawn then
-			for _, o in pairs(mEdgeADrawn) do
-				o:Destroy()
-			end
-			mEdgeADrawn = nil
-		end
 		mEdgeA = nil
 	end
 
 	local function resetToEdgeA()
 		clearEdgeA()
+		mHoverEdge = nil
 		mState = "EdgeA"
 		changeSignal:Fire()
 	end
 
 	local function enableDragger(initialMouseDown: boolean?)
 		if not draggerHandler:isEnabled() then
-			hideHoverEdge()
+			mHoverEdge = nil
 			clearEdgeA()
 			mState = "EdgeA"
 			draggerHandler:enable(initialMouseDown)
@@ -252,19 +189,28 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 	local isOverUI = false
 	local function updateHover()
 		if isOverUI or draggerHandler:isEnabled() then
-			hideHoverEdge()
+			if mHoverEdge ~= nil then
+				mHoverEdge = nil
+				changeSignal:Fire()
+			end
 			return
 		end
 		local result = mouseRaycast()
+		local newHoverEdge: EdgeArrow.EdgeData? = nil
 		if result and not result.Instance.Locked then
 			local hoverEdge = getHoverEdge()
 			if hoverEdge then
-				showHoverEdge(hoverEdge)
-			else
-				hideHoverEdge()
+				newHoverEdge = {
+					a = hoverEdge.a,
+					b = hoverEdge.b,
+					length = hoverEdge.length,
+					vertexMargin = hoverEdge.vertexMargin,
+				}
 			end
-		else
-			hideHoverEdge()
+		end
+		if not edgesMatch(mHoverEdge, newHoverEdge) then
+			mHoverEdge = newHoverEdge
+			changeSignal:Fire()
 		end
 	end
 
@@ -283,25 +229,17 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 				local edge = getHoverEdge()
 				if edge then
 					mEdgeA = edge
-					mEdgeADrawn = drawFace(adornFolder, mEdgeA, Color3.new(1, 0, 0), 0, 0)
 					mState = "EdgeB"
 					changeSignal:Fire()
 				end
 			else
 				-- EdgeB state — perform the fill
-				-- Save edgeA before clearing visuals
+				-- Save edgeA before clearing
 				local savedEdgeA = mEdgeA
 
-				-- Clear EdgeA visual adornments
-				if mEdgeADrawn then
-					for _, o in pairs(mEdgeADrawn) do
-						o:Destroy()
-					end
-					mEdgeADrawn = nil
-				end
 				mEdgeA = nil
 				mState = "EdgeA"
-				hideHoverEdge()
+				mHoverEdge = nil
 
 				local hoverFace, theFace = getHoverEdge()
 				if not hoverFace then
@@ -362,7 +300,6 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 			-- Clicked on nothing
 			if mState == "EdgeB" then
 				resetToEdgeA()
-				hideHoverEdge()
 			end
 		end
 	end
@@ -429,15 +366,26 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 		end
 		task.cancel(delayedBeginCn)
 		task.cancel(cursorTargetTask)
-		hideHoverEdge()
-		clearEdgeA()
-		adornFolder:Destroy()
 		draggerHandler:disable()
 	end
 
 	session.ChangeSignal = changeSignal
 	session.GetEdgeState = function(): "EdgeA" | "EdgeB"
 		return mState
+	end
+	session.GetHoverEdge = function(): EdgeArrow.EdgeData?
+		return mHoverEdge
+	end
+	session.GetSelectedEdge = function(): EdgeArrow.EdgeData?
+		if mEdgeA then
+			return {
+				a = mEdgeA.a,
+				b = mEdgeA.b,
+				length = mEdgeA.length,
+				vertexMargin = mEdgeA.vertexMargin,
+			}
+		end
+		return nil
 	end
 	session.GetSettings = function(): Settings.GapFillSettings
 		return currentSettings

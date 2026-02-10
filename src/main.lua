@@ -89,6 +89,8 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 				HandleAction = handleAction,
 				Panelized = panel.Enabled,
 				EdgeState = getEdgeState(),
+				HoverEdge = if session then session.GetHoverEdge() else nil,
+				SelectedEdge = if session then session.GetSelectedEdge() else nil,
 			}))
 		elseif reactRoot then
 			destroyReactRoot()

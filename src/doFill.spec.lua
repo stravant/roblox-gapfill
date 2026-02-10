@@ -115,7 +115,7 @@ return function(t: TestContext)
 		local wedgeCount = 0
 		for _, p in created do
 			track(p)
-			if p:IsA("WedgePart") then
+			if p.Shape == Enum.PartType.Wedge then
 				wedgeCount += 1
 			else
 				partCount += 1
@@ -155,7 +155,7 @@ return function(t: TestContext)
 		local wedgeCount = 0
 		for _, p in created do
 			track(p)
-			if p:IsA("WedgePart") then
+			if p.Shape == Enum.PartType.Wedge then
 				wedgeCount += 1
 			end
 		end
@@ -192,7 +192,7 @@ return function(t: TestContext)
 		local wedgeCount = 0
 		for _, p in created do
 			track(p)
-			if p:IsA("WedgePart") then
+			if p.Shape == Enum.PartType.Wedge then
 				wedgeCount += 1
 			else
 				partCount += 1
@@ -236,7 +236,7 @@ return function(t: TestContext)
 		local wedgeCount = 0
 		for _, p in created do
 			track(p)
-			if p:IsA("WedgePart") then
+			if p.Shape == Enum.PartType.Wedge then
 				wedgeCount += 1
 			end
 		end
@@ -273,7 +273,7 @@ return function(t: TestContext)
 		local wedgeCount = 0
 		for _, p in created do
 			track(p)
-			if p:IsA("WedgePart") then
+			if p.Shape == Enum.PartType.Wedge then
 				wedgeCount += 1
 			end
 		end
@@ -312,7 +312,7 @@ return function(t: TestContext)
 		local wedgeCount = 0
 		for _, p in created do
 			track(p)
-			if p:IsA("WedgePart") then
+			if p.Shape == Enum.PartType.Wedge then
 				wedgeCount += 1
 			end
 		end
@@ -348,18 +348,8 @@ return function(t: TestContext)
 
 		for _, p in created do
 			track(p)
-			-- For the rectangular fill, one dimension of size should match the override
-			-- Account for mesh scaling
-			local mesh = p:FindFirstChildOfClass("SpecialMesh")
-			local effectiveSize
-			if mesh then
-				effectiveSize = p.Size * mesh.Scale
-			else
-				effectiveSize = p.Size
-			end
 			-- At least one axis should be close to the thickness override
-			local minSize = math.min(effectiveSize.X, effectiveSize.Y, effectiveSize.Z)
-			-- The thickness should be within a small tolerance of the override
+			local minSize = math.min(p.Size.X, p.Size.Y, p.Size.Z)
 			t.expect(math.abs(minSize - thicknessOverride) < 0.01).toBe(true)
 		end
 		cleanupAll()
@@ -395,14 +385,7 @@ return function(t: TestContext)
 
 		for _, p in created do
 			track(p)
-			local mesh = p:FindFirstChildOfClass("SpecialMesh")
-			local effectiveSize
-			if mesh then
-				effectiveSize = p.Size * mesh.Scale
-			else
-				effectiveSize = p.Size
-			end
-			local minSize = math.min(effectiveSize.X, effectiveSize.Y, effectiveSize.Z)
+			local minSize = math.min(p.Size.X, p.Size.Y, p.Size.Z)
 			-- Default thin is 0.05
 			t.expect(math.abs(minSize - 0.05) < 0.01).toBe(true)
 		end
@@ -677,7 +660,7 @@ return function(t: TestContext)
 	--
 	-- Very small edges still work (mesh scaling)
 	--
-	t.test("very small fill uses SpecialMesh for sub-0.05 dimensions", function()
+	t.test("very small fill with sub-0.05 thickness creates parts with correct size", function()
 		local partA = makePart(Vector3.new(0, 0, 0), Vector3.new(0.05, 0.05, 0.05))
 		local partB = makePart(Vector3.new(0.1, 0, 0), Vector3.new(0.05, 0.05, 0.05))
 		track(partA)
@@ -695,22 +678,16 @@ return function(t: TestContext)
 			partB
 		)
 
-		-- Force a thickness of 0.01 which is below the 0.05 minimum
-
 		local created = collectCreatedParts(workspace, function()
 			doFill(edgeA, edgeB, 1, 0.01, 1)
 		end)
 
 		t.expect(#created > 0).toBe(true)
-		-- With 0.01 thickness override, parts need SpecialMesh for the sub-0.05 dimension
-		local hasMesh = false
 		for _, p in created do
 			track(p)
-			if p:FindFirstChildOfClass("SpecialMesh") then
-				hasMesh = true
-			end
+			local minSize = math.min(p.Size.X, p.Size.Y, p.Size.Z)
+			t.expect(math.abs(minSize - 0.01) < 0.005).toBe(true)
 		end
-		t.expect(hasMesh).toBe(true)
 		cleanupAll()
 	end)
 
