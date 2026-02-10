@@ -3,18 +3,16 @@ local COMBINE_TOOLBAR = false
 
 local createSharedToolbar = require(script.Parent.Packages.createSharedToolbar)
 local Signal = require(script.Parent.Packages.Signal)
-
-local RIBBON_ICON = "rbxassetid://4521972465"
-local TOOLTIP = "Generate geometry filling the space between two selected part edges."
+local define = require(script.Parent.Src.define)
 
 local setButtonActive: (active: boolean) -> () = nil
 local buttonClicked = Signal.new()
 
 if COMBINE_TOOLBAR then
 	local toolbarSettings: createSharedToolbar.SharedToolbarSettings = {
-		ButtonName = "GapFill",
-		ButtonTooltip = TOOLTIP,
-		ButtonIcon = RIBBON_ICON,
+		ButtonName = define.PluginName,
+		ButtonTooltip = define.ButtonTooltip,
+		ButtonIcon = define.ButtonIcon,
 		ToolbarName = "GeomTools",
 		CombinerName = "GeomToolsToolbar",
 		ClickedFn = function()
@@ -26,8 +24,8 @@ if COMBINE_TOOLBAR then
 		assert(toolbarSettings.Button):SetActive(active)
 	end
 else
-	local toolbar = plugin:CreateToolbar("GapFill")
-	local button = toolbar:CreateButton("openGapFill", TOOLTIP, RIBBON_ICON, "GapFill")
+	local toolbar = plugin:CreateToolbar(define.PluginName)
+	local button = toolbar:CreateButton(`open{define.PluginName}`, define.ButtonTooltip, define.ButtonIcon, define.PluginName)
 	local clickCn = button.Click:Connect(function()
 		buttonClicked:Fire()
 	end)
@@ -49,7 +47,7 @@ local params = DockWidgetPluginGuiInfo.new(
 	240, -- Minimum width
 	200  -- Minimum height
 )
-local panel = plugin:CreateDockWidgetPluginGuiAsync("GapFillPanel", params)
+local panel = plugin:CreateDockWidgetPluginGuiAsync(`${define.PluginName}Panel`, params)
 
 local loaded = false
 local function doInitialLoad()
@@ -66,7 +64,7 @@ local clickedCn = buttonClicked:Connect(function()
 	end
 end)
 
-panel.Title = "GapFill"
+panel.Title = define.PluginName
 panel.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 if panel.Enabled then
 	doInitialLoad()
