@@ -101,6 +101,15 @@ local function commitRecording(id: string)
 	ChangeHistoryService:FinishRecording(id, Enum.FinishRecordingOperation.Commit)
 end
 
+local function getCameraDepth(point: Vector3): number
+	local camera = workspace.CurrentCamera
+	if camera then
+		return math.abs(camera:WorldToViewportPoint(point).Z)
+	else
+		return 40
+	end
+end
+
 local function edgesMatch(a: EdgeArrow.EdgeData?, b: EdgeArrow.EdgeData?): boolean
 	if a == nil and b == nil then
 		return true
@@ -204,7 +213,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 					a = hoverEdge.a,
 					b = hoverEdge.b,
 					length = hoverEdge.length,
-					vertexMargin = hoverEdge.vertexMargin,
+					cameraDepth = getCameraDepth((hoverEdge.a + hoverEdge.b) / 2),
 				}
 			end
 		end
@@ -382,7 +391,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 				a = mEdgeA.a,
 				b = mEdgeA.b,
 				length = mEdgeA.length,
-				vertexMargin = mEdgeA.vertexMargin,
+				cameraDepth = getCameraDepth((mEdgeA.a + mEdgeA.b) / 2),
 			}
 		end
 		return nil
