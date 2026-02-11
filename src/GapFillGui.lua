@@ -495,6 +495,15 @@ adornFolder.Name = "$GapFillAdornments"
 adornFolder.Archivable = false
 adornFolder.Parent = CoreGui
 
+local function scaleForDepth(point: Vector3): number
+	local camera = workspace.CurrentCamera
+	if camera then
+		local depth = math.abs(camera:WorldToViewportPoint(point).Z)
+		return depth / 150
+	end
+	return 1
+end
+
 local function edgesOverlap(a: EdgeArrow.EdgeData, b: EdgeArrow.EdgeData): boolean
 	return (a.a:FuzzyEq(b.a) and a.b:FuzzyEq(b.b))
 		or (a.a:FuzzyEq(b.b) and a.b:FuzzyEq(b.a))
@@ -520,64 +529,95 @@ local function AdornmentOverlay(props: {
 		local selectedColor = Color3.new(1, 0, 0)
 		local hoverColor = Color3.new(0, 0, 1)
 
-		-- Base scale for adornments
-		local baseScale = 0.25
-		local wireRadius = baseScale * 0.4
+		-- Scale constants (multiplied by depth-based scale)
+		local VERTEX_RADIUS = 2
+		local WIRE_RADIUS = 0.75
+		local HOVER_CLOSE_SCALE = 1.8
 
 		-- Render selected vertex markers
 		for i, vertex in vertices do
+			local scale = scaleForDepth(vertex)
 			children["Vertex" .. tostring(i)] = e(VertexMarker, {
 				Position = vertex,
 				Color = selectedColor,
-				Radius = baseScale,
+				Radius = scale * VERTEX_RADIUS,
 				ZIndexOffset = i, -- Ensure later vertices render on top
 			})
 		end
 
 		-- Render wireframe edges between consecutive vertices
 		for i = 1, #vertices - 1 do
+			local midpoint = (vertices[i] + vertices[i + 1]) / 2
+			local scale = scaleForDepth(midpoint)
 			children["Edge" .. tostring(i)] = e(WireframeEdge, {
 				From = vertices[i],
 				To = vertices[i + 1],
 				Color = selectedColor,
-				Radius = wireRadius,
+				Radius = scale * WIRE_RADIUS,
 				ZIndexOffset = 1,
 			})
 		end
 
-		-- Render hover vertex marker
+		-- Check if hover vertex overlaps any selected vertex
+		local hoverOnSelected = false
 		if hoverVertex then
-			local thisHoverColor = if props.IsNearFirstVertex and #vertices >= 3
-				then Color3.new(0, 1, 0)
-				else hoverColor
-			local hoverRadius = if props.IsNearFirstVertex and #vertices >= 3
-				then baseScale * 1.8
-				else baseScale
+			for _, vertex in vertices do
+				if hoverVertex:FuzzyEq(vertex) then
+					hoverOnSelected = true
+					break
+				end
+			end
+		end
+
+		-- Render hover vertex marker (skip if it overlaps a selected vertex)
+		local closingLoop = hoverVertex ~= nil and props.IsNearFirstVertex and #vertices >= 3
+		if hoverVertex and not hoverOnSelected then
+			local scale = scaleForDepth(hoverVertex)
 			children.HoverVertex = e(VertexMarker, {
 				Position = hoverVertex,
-				Color = thisHoverColor,
-				Radius = hoverRadius,
+				Color = hoverColor,
+				Radius = scale * VERTEX_RADIUS,
 				ZIndexOffset = 4,
 			})
+		end
+
+		if hoverVertex then
+			local hoverOnLast = #vertices >= 1 and hoverVertex:FuzzyEq(vertices[#vertices])
 
 			-- Wireframe from last vertex to hover
-			if #vertices >= 1 then
+			if #vertices >= 1 and not hoverOnSelected then
+				local midpoint = (vertices[#vertices] + hoverVertex) / 2
+				local scale = scaleForDepth(midpoint)
 				children.HoverEdgeFromLast = e(WireframeEdge, {
 					From = vertices[#vertices],
 					To = hoverVertex,
 					Color = hoverColor,
-					Radius = wireRadius,
+					Radius = scale * WIRE_RADIUS,
 					ZIndexOffset = 2,
 				})
 			end
 
-			-- Wireframe from hover back to first vertex (closing edge preview)
-			if #vertices >= 2 then
+			-- Wireframe closing edge preview back to first vertex
+			if closingLoop or (hoverOnLast and #vertices >= 3) then
+				-- Hovering first or last vertex with enough verts: show green closing edge
+				local midpoint = (vertices[#vertices] + vertices[1]) / 2
+				local scale = scaleForDepth(midpoint)
+				children.HoverEdgeToFirst = e(WireframeEdge, {
+					From = vertices[#vertices],
+					To = vertices[1],
+					Color = Color3.new(0, 1, 0),
+					Radius = scale * WIRE_RADIUS,
+					ZIndexOffset = 2,
+				})
+			elseif #vertices >= 2 and not hoverOnSelected then
+				-- Normal hover: preview path back to first
+				local midpoint = (hoverVertex + vertices[1]) / 2
+				local scale = scaleForDepth(midpoint)
 				children.HoverEdgeToFirst = e(WireframeEdge, {
 					From = hoverVertex,
 					To = vertices[1],
 					Color = hoverColor,
-					Radius = wireRadius,
+					Radius = scale * WIRE_RADIUS,
 					ZIndexOffset = 2,
 				})
 			end
