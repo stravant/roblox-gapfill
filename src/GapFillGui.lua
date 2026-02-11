@@ -495,6 +495,11 @@ adornFolder.Name = "$GapFillAdornments"
 adornFolder.Archivable = false
 adornFolder.Parent = CoreGui
 
+local function edgesOverlap(a: EdgeArrow.EdgeData, b: EdgeArrow.EdgeData): boolean
+	return (a.a:FuzzyEq(b.a) and a.b:FuzzyEq(b.b))
+		or (a.a:FuzzyEq(b.b) and a.b:FuzzyEq(b.a))
+end
+
 local function AdornmentOverlay(props: {
 	HoverEdge: EdgeArrow.EdgeData?,
 	SelectedEdge: EdgeArrow.EdgeData?,
@@ -579,7 +584,10 @@ local function AdornmentOverlay(props: {
 		end
 	else
 		-- Edge mode adornments (existing behavior)
-		if props.SelectedEdge then
+		local hoverMatchesSelected = props.SelectedEdge ~= nil
+			and props.HoverEdge ~= nil
+			and edgesOverlap(props.SelectedEdge, props.HoverEdge)
+		if props.SelectedEdge and not hoverMatchesSelected then
 			children.SelectedEdge = e(EdgeArrow, {
 				Edge = props.SelectedEdge,
 				Color = Color3.new(1, 0, 0),
