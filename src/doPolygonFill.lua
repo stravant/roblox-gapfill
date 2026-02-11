@@ -22,14 +22,16 @@ local function doPolygonFill(
 		secondaryPart = nil,
 		parent = actualParent,
 		thickness = thickness,
-		forceFactor = forceFactor,
+		forceFactor = 1,
 		extrudeDirectionModifier = 1,
 	}
 
 	-- Use the negated surface normal as the direction hint: the hit normal
 	-- points outward from the clicked surface, so negate it to make the fill
 	-- go into the geometry (flush with the adjacent surface).
-	local normalHint: Vector3? = if surfaceNormal then -surfaceNormal else nil
+	-- Bake forceFactor into the hint so that it isn't overridden by the
+	-- normalHint consistency check inside fillTriangle.
+	local normalHint: Vector3? = if surfaceNormal then -surfaceNormal * forceFactor else nil
 
 	-- Fan triangulation from vertex[1]
 	for i = 2, #vertices - 1 do
