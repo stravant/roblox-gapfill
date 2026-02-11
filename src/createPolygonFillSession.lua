@@ -64,6 +64,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 
 	local vertices: { Vector3 } = {}
 	local referencePart: BasePart? = nil
+	local surfaceNormal: Vector3? = nil
 	local hoverVertex: Vector3? = nil
 	local isNearFirst = false
 
@@ -116,6 +117,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 	local function resetVertices()
 		vertices = {}
 		referencePart = nil
+		surfaceNormal = nil
 		isNearFirst = false
 		changeSignal:Fire()
 	end
@@ -136,7 +138,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		local forceFactor = getForceFactor()
 		local parent = refPart.Parent or workspace
 
-		local parts = doPolygonFill(vertices, refPart, thickness, forceFactor, parent)
+		local parts = doPolygonFill(vertices, refPart, surfaceNormal, thickness, forceFactor, parent)
 		tryUnionParts(parts)
 
 		if recording then
@@ -221,6 +223,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 				table.insert(vertices, vertex)
 				if referencePart == nil then
 					referencePart = part :: BasePart
+					surfaceNormal = result.Normal
 				end
 				changeSignal:Fire()
 			end

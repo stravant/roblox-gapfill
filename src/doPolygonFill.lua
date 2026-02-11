@@ -5,6 +5,7 @@ local fillTriangle = require("./fillTriangle")
 local function doPolygonFill(
 	vertices: { Vector3 },
 	referencePart: BasePart,
+	surfaceNormal: Vector3?,
 	thickness: number,
 	forceFactor: number,
 	parent: Instance?
@@ -25,14 +26,10 @@ local function doPolygonFill(
 		extrudeDirectionModifier = 1,
 	}
 
-	-- Compute polygon normal from first two edge vectors for consistent winding
-	local normalHint: Vector3? = nil
-	local edge1 = vertices[2] - vertices[1]
-	local edge2 = vertices[3] - vertices[1]
-	local cross = edge1:Cross(edge2)
-	if cross.Magnitude > 0.0001 then
-		normalHint = cross.Unit
-	end
+	-- Use the negated surface normal as the direction hint: the hit normal
+	-- points outward from the clicked surface, so negate it to make the fill
+	-- go into the geometry (flush with the adjacent surface).
+	local normalHint: Vector3? = if surfaceNormal then -surfaceNormal else nil
 
 	-- Fan triangulation from vertex[1]
 	for i = 2, #vertices - 1 do

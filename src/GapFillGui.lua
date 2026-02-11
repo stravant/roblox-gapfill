@@ -532,7 +532,6 @@ local function AdornmentOverlay(props: {
 		-- Scale constants (multiplied by depth-based scale)
 		local VERTEX_RADIUS = 2
 		local WIRE_RADIUS = 0.75
-		local HOVER_CLOSE_SCALE = 1.8
 
 		-- Render selected vertex markers
 		for i, vertex in vertices do
