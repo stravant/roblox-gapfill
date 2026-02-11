@@ -2,6 +2,7 @@
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local ServerStorage = game:GetService("ServerStorage")
+local Selection = game:GetService("Selection")
 
 local function createVirtualUndo(waypointName: string, attributeName: string)
 	local installed = false
@@ -27,6 +28,7 @@ local function createVirtualUndo(waypointName: string, attributeName: string)
 		if not ChangeHistoryService:GetCanUndo() then
 			return
 		end
+		local old = Selection:Get()
 		local thisTask = nil
 		local foundWaypointName = nil
 		ChangeHistoryService.OnUndo:Once(function(name: string)
@@ -52,6 +54,7 @@ local function createVirtualUndo(waypointName: string, attributeName: string)
 		if foundWaypointName ~= waypointName then
 			ChangeHistoryService:Redo()
 		end
+		Selection:Set(old)
 		installed = false
 	end
 
