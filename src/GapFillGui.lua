@@ -496,11 +496,6 @@ local function ClassicDirectionPanel(props: {
 	})
 end
 
-local adornFolder = Instance.new("Folder")
-adornFolder.Name = "$GapFillAdornments"
-adornFolder.Archivable = false
-adornFolder.Parent = CoreGui
-
 local function scaleForDepth(point: Vector3): number
 	local camera = workspace.CurrentCamera
 	if camera then
@@ -649,7 +644,10 @@ local function AdornmentOverlay(props: {
 		end
 	end
 
-	return ReactRoblox.createPortal(children, adornFolder)
+	return ReactRoblox.createPortal(e("Folder", {
+		Name = "$GapFillAdornments",
+		Archivable = false,
+	}, children), CoreGui)
 end
 
 local function ClassicContent(props: {
