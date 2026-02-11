@@ -5,6 +5,8 @@ if workspace.Name ~= "runtests" then
 	return
 end
 
+_G.__ROACT_17_MOCK_SCHEDULER__ = true
+
 local HttpService = game:GetService("HttpService")
 
 local WS_URL = "ws://localhost:38741"
