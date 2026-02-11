@@ -1,4 +1,5 @@
 --!strict
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local CoreGui = game:GetService("CoreGui")
 
 local Packages = script.Parent.Parent.Packages
@@ -205,6 +206,14 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 		end
 	end)
 
+	local undoCn = ChangeHistoryService.OnUndo:Connect(function(waypointName: string)
+		task.defer(function()
+			if polySession and polySession.Undo(waypointName) then
+				updateUI()
+			end
+		end)
+	end)
+
 	-- Initial UI show in the case where we're in Panelized mode
 	updateUI()
 
@@ -219,5 +228,6 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 		destroyReactRoot()
 		Settings.Save(plugin, activeSettings)
 		clickedCn:Disconnect()
+		undoCn:Disconnect()
 	end)
 end

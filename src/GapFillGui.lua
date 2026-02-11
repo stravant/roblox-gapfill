@@ -234,7 +234,7 @@ local function OptionsPanel(props: {
 	})
 end
 
-local function PolygonActionButtons(props: {
+local function _PolygonActionButtons(props: {
 	HandleAction: (string) -> (),
 	VertexCount: number,
 	LayoutOrder: number?,
@@ -307,7 +307,7 @@ local function FillModePanel(props: {
 		elseif props.VertexCount < 3 then
 			statusText = `{props.VertexCount} vertices selected. Click more vertices to define a polygon.`
 		else
-			statusText = `{props.VertexCount} vertices selected. Click the first vertex or press Done to complete.`
+			statusText = `{props.VertexCount} vertices selected. Click the same vertex again to finish.`
 		end
 	else
 		if props.EdgeState == "EdgeA" then
@@ -385,11 +385,17 @@ local function FillModePanel(props: {
 				CornerRadius = UDim.new(0, 4),
 			}),
 		}),
-		PolygonActions = isPolygon and e(PolygonActionButtons, {
-			HandleAction = props.HandleAction,
-			VertexCount = props.VertexCount,
-			LayoutOrder = 3,
-		}),
+		-- I don't think I want to waste space on these action buttons
+		-- It's clear enough what to do with clicking and actually more
+		-- convinient to do it that way. Not having a reset button could be
+		-- annoying but you could just close and reopen the tool if you have
+		-- to back out of many selected vertices. Or finish the placement and
+		-- undo.
+		-- PolygonActions = isPolygon and e(PolygonActionButtons, {
+		-- 	HandleAction = props.HandleAction,
+		-- 	VertexCount = props.VertexCount,
+		-- 	LayoutOrder = 3,
+		-- }),
 	})
 end
 

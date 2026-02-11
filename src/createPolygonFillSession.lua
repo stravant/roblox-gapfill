@@ -11,6 +11,7 @@ local Signal = require(Packages.Signal)
 
 local doPolygonFill = require(Src.doPolygonFill)
 local copyPartProps = require(Src.copyPartProps)
+local createVirtualUndo = require("./createVirtualUndo")
 local Settings = require("./Settings")
 
 type GeometryEdge = typeof(Geometry.getGeometry(...).edges[1])
@@ -61,6 +62,7 @@ end
 local function createPolygonFillSession(plugin: Plugin, currentSettings: Settings.GapFillSettings)
 	local session = {}
 	local changeSignal = Signal.new()
+	local virtualUndo = createVirtualUndo("GapFill polygon vertex", "GapFillPolygonUndoWaypoint")
 
 	local vertices: { Vector3 } = {}
 	local referencePart: BasePart? = nil
@@ -115,6 +117,9 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 	end
 
 	local function resetVertices()
+		if #vertices > 0 then
+			virtualUndo.uninstall()
+		end
 		vertices = {}
 		referencePart = nil
 		surfaceNormal = nil
@@ -131,6 +136,8 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		if not refPart then
 			return
 		end
+
+		virtualUndo.uninstall()
 
 		local recording = startRecording()
 
@@ -225,6 +232,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 					referencePart = part :: BasePart
 					surfaceNormal = result.Normal
 				end
+				virtualUndo.install()
 				changeSignal:Fire()
 			end
 		else
@@ -233,6 +241,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 				table.remove(vertices, #vertices)
 				if #vertices == 0 then
 					referencePart = nil
+					virtualUndo.uninstall()
 				end
 				changeSignal:Fire()
 			end
@@ -297,10 +306,25 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 	session.ResetVertices = function()
 		resetVertices()
 	end
+	session.Undo = function(waypointName: string): boolean
+		return virtualUndo.handleUndo(waypointName, function()
+			if #vertices > 0 then
+				table.remove(vertices, #vertices)
+				if #vertices == 0 then
+					referencePart = nil
+				end
+				changeSignal:Fire()
+			end
+			return #vertices > 0
+		end)
+	end
 	session.Update = function()
 		-- Settings may have changed, nothing else to do
 	end
 	session.Destroy = function()
+		if #vertices > 0 then
+			virtualUndo.uninstall()
+		end
 		teardown()
 	end
 
