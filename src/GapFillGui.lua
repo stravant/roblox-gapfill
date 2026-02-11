@@ -16,6 +16,8 @@ local NumberInput = require("./PluginGui/NumberInput")
 local Settings = require("./Settings")
 local PluginGuiTypes = require("./PluginGui/Types")
 local EdgeArrow = require("./EdgeArrow")
+local VertexMarker = require("./VertexMarker")
+local WireframeEdge = require("./WireframeEdge")
 
 local e = React.createElement
 
@@ -232,26 +234,132 @@ local function OptionsPanel(props: {
 	})
 end
 
-local function StatusDisplay(props: {
-	EdgeState: "EdgeA" | "EdgeB",
+local function PolygonActionButtons(props: {
+	HandleAction: (string) -> (),
+	VertexCount: number,
 	LayoutOrder: number?,
 })
-	local text = if props.EdgeState == "EdgeA"
-		then "Select the first edge of a gap to fill the space between."
-		else "Select second edge of the gap, or click empty space to cancel."
+	local canDone = props.VertexCount >= 3
+	local canReset = props.VertexCount > 0
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		LayoutOrder = props.LayoutOrder,
+		AutomaticSize = Enum.AutomaticSize.Y,
 	}, {
-		Padding = e("UIPadding", {
-			PaddingTop = UDim.new(0, 4),
-			PaddingBottom = UDim.new(0, 4),
-			PaddingLeft = UDim.new(0, 6),
-			PaddingRight = UDim.new(0, 6),
+		Layout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 4),
 		}),
-		Label = e("TextLabel", {
+		DoneButton = e("Frame", {
+			Size = UDim2.new(0.5, -2, 0, 0),
+			BackgroundTransparency = 1,
+			AutomaticSize = Enum.AutomaticSize.Y,
+			LayoutOrder = 1,
+		}, {
+			Button = e(OperationButton, {
+				Text = "Done",
+				Color = Colors.ACTION_BLUE,
+				Disabled = not canDone,
+				Height = 30,
+				OnClick = function()
+					props.HandleAction("commitPolygon")
+				end,
+			}),
+		}),
+		ResetButton = e("Frame", {
+			Size = UDim2.new(0.5, -2, 0, 0),
+			BackgroundTransparency = 1,
+			AutomaticSize = Enum.AutomaticSize.Y,
+			LayoutOrder = 2,
+		}, {
+			Button = e(OperationButton, {
+				Text = "Reset",
+				Color = Colors.DARK_RED,
+				Disabled = not canReset,
+				Height = 30,
+				OnClick = function()
+					props.HandleAction("resetPolygon")
+				end,
+			}),
+		}),
+	})
+end
+
+local function FillModePanel(props: {
+	Settings: Settings.GapFillSettings,
+	UpdatedSettings: () -> (),
+	HandleAction: (string) -> (),
+	LayoutOrder: number?,
+	EdgeState: "EdgeA" | "EdgeB",
+	VertexCount: number,
+})
+	local current = props.Settings.FillMode
+	local isPolygon = current == "Polygon"
+
+	local statusText
+	if isPolygon then
+		if props.VertexCount == 0 then
+			statusText = "Click part vertices to define a polygon."
+		elseif props.VertexCount == 1 then
+			statusText = "1 vertex selected. Click more vertices to define a polygon."
+		elseif props.VertexCount < 3 then
+			statusText = `{props.VertexCount} vertices selected. Click more vertices to define a polygon.`
+		else
+			statusText = `{props.VertexCount} vertices selected. Click the first vertex or press Done to complete.`
+		end
+	else
+		if props.EdgeState == "EdgeA" then
+			statusText = "Select the first edge of a gap to fill the space between."
+		else
+			statusText = "Select second edge of the gap, or click empty space to cancel."
+		end
+	end
+
+	return e(SubPanel, {
+		Title = "Fill Mode",
+		LayoutOrder = props.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, {
+		Buttons = e(HelpGui.WithHelpIcon, {
+			LayoutOrder = 1,
+			Subject = e("Frame", {
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+			}, {
+				ListLayout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 4),
+				}),
+				EdgeFill = e(ChipForToggle, {
+					Text = "Edge Fill",
+					IsCurrent = current == "Edge",
+					LayoutOrder = 1,
+					OnClick = function()
+						props.Settings.FillMode = "Edge"
+						props.UpdatedSettings()
+					end,
+				}),
+				PolygonFill = e(ChipForToggle, {
+					Text = "Polygon Fill",
+					IsCurrent = current == "Polygon",
+					LayoutOrder = 2,
+					OnClick = function()
+						props.Settings.FillMode = "Polygon"
+						props.UpdatedSettings()
+					end,
+				}),
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText =
+					"<b>Edge Fill</b> — Select two edges and fill the gap between them with wedge parts.\n" ..
+					"<b>Polygon Fill</b> — Click a sequence of vertices to define a polygon, then fill it with wedge parts.",
+			}),
+		}),
+		Status = props.Settings.HaveHelp and e("TextLabel", {
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 0,
@@ -261,10 +369,11 @@ local function StatusDisplay(props: {
 			TextSize = 18,
 			TextColor3 = Colors.WHITE,
 			RichText = true,
-			Text = `<i>{text}</i>`,
+			Text = `<i>{statusText}</i>`,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
+			LayoutOrder = 2,
 		}, {
 			Padding = e("UIPadding", {
 				PaddingTop = UDim.new(0, 2),
@@ -275,6 +384,11 @@ local function StatusDisplay(props: {
 			Corner = e("UICorner", {
 				CornerRadius = UDim.new(0, 4),
 			}),
+		}),
+		PolygonActions = isPolygon and e(PolygonActionButtons, {
+			HandleAction = props.HandleAction,
+			VertexCount = props.VertexCount,
+			LayoutOrder = 3,
 		}),
 	})
 end
@@ -299,7 +413,7 @@ local function CloseButton(props: {
 			Text = "Close <i>GapFill</i>",
 			Color = Colors.DARK_RED,
 			Disabled = false,
-			Height = 34,
+			Height = 30,
 			OnClick = function()
 				props.HandleAction("cancel")
 			end,
@@ -385,23 +499,103 @@ local function AdornmentOverlay(props: {
 	HoverEdge: EdgeArrow.EdgeData?,
 	SelectedEdge: EdgeArrow.EdgeData?,
 	EdgeState: "EdgeA" | "EdgeB",
+	FillMode: Settings.FillMode,
+	Vertices: { Vector3 }?,
+	HoverVertex: Vector3?,
+	IsNearFirstVertex: boolean,
 })
 	local children: { [string]: any } = {}
-	if props.SelectedEdge then
-		children.SelectedEdge = e(EdgeArrow, {
-			Edge = props.SelectedEdge,
-			Color = Color3.new(1, 0, 0),
-			ZIndexOffset = 0,
-		})
+
+	if props.FillMode == "Polygon" then
+		-- Polygon mode adornments
+		local vertices = props.Vertices or {}
+		local hoverVertex = props.HoverVertex
+
+		-- Colors matching edge mode: red for selected, blue for hover
+		local selectedColor = Color3.new(1, 0, 0)
+		local hoverColor = Color3.new(0, 0, 1)
+
+		-- Base scale for adornments
+		local baseScale = 0.25
+		local wireRadius = baseScale * 0.4
+
+		-- Render selected vertex markers
+		for i, vertex in vertices do
+			children["Vertex" .. tostring(i)] = e(VertexMarker, {
+				Position = vertex,
+				Color = selectedColor,
+				Radius = baseScale,
+				ZIndexOffset = i, -- Ensure later vertices render on top
+			})
+		end
+
+		-- Render wireframe edges between consecutive vertices
+		for i = 1, #vertices - 1 do
+			children["Edge" .. tostring(i)] = e(WireframeEdge, {
+				From = vertices[i],
+				To = vertices[i + 1],
+				Color = selectedColor,
+				Radius = wireRadius,
+				ZIndexOffset = 1,
+			})
+		end
+
+		-- Render hover vertex marker
+		if hoverVertex then
+			local thisHoverColor = if props.IsNearFirstVertex and #vertices >= 3
+				then Color3.new(0, 1, 0)
+				else hoverColor
+			local hoverRadius = if props.IsNearFirstVertex and #vertices >= 3
+				then baseScale * 1.8
+				else baseScale
+			children.HoverVertex = e(VertexMarker, {
+				Position = hoverVertex,
+				Color = thisHoverColor,
+				Radius = hoverRadius,
+				ZIndexOffset = 4,
+			})
+
+			-- Wireframe from last vertex to hover
+			if #vertices >= 1 then
+				children.HoverEdgeFromLast = e(WireframeEdge, {
+					From = vertices[#vertices],
+					To = hoverVertex,
+					Color = hoverColor,
+					Radius = wireRadius,
+					ZIndexOffset = 2,
+				})
+			end
+
+			-- Wireframe from hover back to first vertex (closing edge preview)
+			if #vertices >= 2 then
+				children.HoverEdgeToFirst = e(WireframeEdge, {
+					From = hoverVertex,
+					To = vertices[1],
+					Color = hoverColor,
+					Radius = wireRadius,
+					ZIndexOffset = 2,
+				})
+			end
+		end
+	else
+		-- Edge mode adornments (existing behavior)
+		if props.SelectedEdge then
+			children.SelectedEdge = e(EdgeArrow, {
+				Edge = props.SelectedEdge,
+				Color = Color3.new(1, 0, 0),
+				ZIndexOffset = 0,
+			})
+		end
+		if props.HoverEdge then
+			local hoverColor = if props.EdgeState == "EdgeA" then Color3.new(1, 0, 0) else Color3.new(0, 0, 1)
+			children.HoverEdge = e(EdgeArrow, {
+				Edge = props.HoverEdge,
+				Color = hoverColor,
+				ZIndexOffset = 2,
+			})
+		end
 	end
-	if props.HoverEdge then
-		local hoverColor = if props.EdgeState == "EdgeA" then Color3.new(1, 0, 0) else Color3.new(0, 0, 1)
-		children.HoverEdge = e(EdgeArrow, {
-			Edge = props.HoverEdge,
-			Color = hoverColor,
-			ZIndexOffset = 2,
-		})
-	end
+
 	return ReactRoblox.createPortal(children, adornFolder)
 end
 
@@ -445,13 +639,18 @@ local function ModernContent(props: {
 	UpdatedSettings: () -> (),
 	HandleAction: (string) -> (),
 	EdgeState: "EdgeA" | "EdgeB",
+	Vertices: { Vector3 }?,
 })
 	local currentSettings = props.CurrentSettings
 	local nextOrder = createNextOrder()
+	local vertexCount = if props.Vertices then #props.Vertices else 0
 	return React.createElement(React.Fragment, nil, {
-		-- Only show the status for new users who haven't disabled the help
-		StatusDisplay = currentSettings.HaveHelp and e(StatusDisplay, {
+		FillModePanel = e(FillModePanel, {
+			Settings = currentSettings,
+			UpdatedSettings = props.UpdatedSettings,
+			HandleAction = props.HandleAction,
 			EdgeState = props.EdgeState,
+			VertexCount = vertexCount,
 			LayoutOrder = nextOrder(),
 		}),
 		ThicknessPanel = e(ThicknessPanel, {
@@ -491,6 +690,10 @@ local function GapFillGui(props: {
 	EdgeState: "EdgeA" | "EdgeB",
 	HoverEdge: EdgeArrow.EdgeData?,
 	SelectedEdge: EdgeArrow.EdgeData?,
+	-- Polygon mode props
+	Vertices: { Vector3 }?,
+	HoverVertex: Vector3?,
+	IsNearFirstVertex: boolean?,
 })
 	local currentSettings = props.CurrentSettings
 	return e(PluginGui, {
@@ -507,6 +710,10 @@ local function GapFillGui(props: {
 			HoverEdge = props.HoverEdge,
 			SelectedEdge = props.SelectedEdge,
 			EdgeState = props.EdgeState,
+			FillMode = currentSettings.FillMode,
+			Vertices = props.Vertices,
+			HoverVertex = props.HoverVertex,
+			IsNearFirstVertex = props.IsNearFirstVertex or false,
 		}),
 		Content = if currentSettings.ClassicUI
 			then e(ClassicContent, {
@@ -518,6 +725,7 @@ local function GapFillGui(props: {
 				UpdatedSettings = props.UpdatedSettings,
 				HandleAction = props.HandleAction,
 				EdgeState = props.EdgeState,
+				Vertices = props.Vertices,
 			}),
 	})
 end

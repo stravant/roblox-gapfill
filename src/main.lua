@@ -7,12 +7,14 @@ local ReactRoblox = require(Packages.ReactRoblox)
 local Signal = require(Packages.Signal)
 
 local createGapFillSession = require("./createGapFillSession")
+local createPolygonFillSession = require("./createPolygonFillSession")
 local Settings = require("./Settings")
 local GapFillGui = require("./GapFillGui")
 local PluginGuiTypes = require("./PluginGui/Types")
 
 return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signal.Signal<>, setButtonActive: (active: boolean) -> ())
-	local session: createGapFillSession.GapFillSession? = nil
+	local edgeSession: createGapFillSession.GapFillSession? = nil
+	local polySession: createPolygonFillSession.PolygonFillSession? = nil
 
 	local active = false
 
@@ -57,11 +59,13 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 	end
 
 	local function getEdgeState(): "EdgeA" | "EdgeB"
-		if session then
-			return session.GetEdgeState()
+		if edgeSession then
+			return edgeSession.GetEdgeState()
 		end
 		return "EdgeA"
 	end
+
+	local ensureCorrectSession;
 
 	local function updateUI()
 		local needsUI = active or panel.Enabled
@@ -81,16 +85,27 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 				GuiState = getGuiState(),
 				CurrentSettings = activeSettings,
 				UpdatedSettings = function()
-					if session then
-						session.Update()
+					if edgeSession then
+						edgeSession.Update()
+					end
+					if polySession then
+						polySession.Update()
+					end
+					if active then
+						ensureCorrectSession()
 					end
 					updateUI()
 				end,
 				HandleAction = handleAction,
 				Panelized = panel.Enabled,
+				-- Edge mode props
 				EdgeState = getEdgeState(),
-				HoverEdge = if session then session.GetHoverEdge() else nil,
-				SelectedEdge = if session then session.GetSelectedEdge() else nil,
+				HoverEdge = if edgeSession then edgeSession.GetHoverEdge() else nil,
+				SelectedEdge = if edgeSession then edgeSession.GetSelectedEdge() else nil,
+				-- Polygon mode props
+				Vertices = if polySession then polySession.GetVertices() else nil,
+				HoverVertex = if polySession then polySession.GetHoverVertex() else nil,
+				IsNearFirstVertex = if polySession then polySession.GetIsNearFirstVertex() else false,
 			}))
 		elseif reactRoot then
 			destroyReactRoot()
@@ -98,9 +113,37 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 	end
 
 	local function destroySession()
-		if session then
-			session.Destroy()
-			session = nil
+		if edgeSession then
+			edgeSession.Destroy()
+			edgeSession = nil
+		end
+		if polySession then
+			polySession.Destroy()
+			polySession = nil
+		end
+	end
+
+	function ensureCorrectSession()
+		if activeSettings.FillMode == "Polygon" then
+			if edgeSession then
+				edgeSession.Destroy()
+				edgeSession = nil
+			end
+			if not polySession then
+				local newSession = createPolygonFillSession(plugin, activeSettings)
+				newSession.ChangeSignal:Connect(updateUI)
+				polySession = newSession
+			end
+		else
+			if polySession then
+				polySession.Destroy()
+				polySession = nil
+			end
+			if not edgeSession then
+				local newSession = createGapFillSession(plugin, activeSettings)
+				newSession.ChangeSignal:Connect(updateUI)
+				edgeSession = newSession
+			end
 		end
 	end
 
@@ -116,11 +159,7 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 				plugin:Activate(true)
 				pluginActive = true
 			end
-			if not session then
-				local newSession = createGapFillSession(plugin, activeSettings)
-				newSession.ChangeSignal:Connect(updateUI)
-				session = newSession
-			end
+			ensureCorrectSession()
 		else
 			destroySession()
 		end
@@ -145,6 +184,14 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 		elseif action == "togglePanelized" then
 			panel.Enabled = not panel.Enabled
 			updateUI()
+		elseif action == "commitPolygon" then
+			if polySession then
+				polySession.CommitPolygon()
+			end
+		elseif action == "resetPolygon" then
+			if polySession then
+				polySession.ResetVertices()
+			end
 		else
 			warn("GapFill: Unknown action: "..action)
 		end
