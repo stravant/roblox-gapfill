@@ -131,6 +131,7 @@ local function runTests(ws: WebSocketClient, filter: string)
 			fail = function(message: string)
 				error(message, 2)
 			end,
+			plugin = plugin,
 		}
 
 		-- Collect and run individual tests

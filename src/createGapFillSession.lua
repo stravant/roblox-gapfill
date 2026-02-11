@@ -409,6 +409,17 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 		teardown()
 	end
 
+	-- Test hooks (not for production use)
+	session.TestSelectEdge = function(edge: any, edgeSurfaceNormal: Vector3)
+		mEdgeA = edge
+		mSurfaceNormal = edgeSurfaceNormal
+		mState = "EdgeB"
+		changeSignal:Fire()
+	end
+	session.TestResetEdge = function()
+		resetToEdgeA()
+	end
+
 	return session
 end
 

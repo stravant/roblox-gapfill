@@ -328,6 +328,34 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		teardown()
 	end
 
+	-- Test hooks (not for production use)
+	session.TestAddVertex = function(vertex: Vector3, part: BasePart, normal: Vector3?)
+		table.insert(vertices, vertex)
+		if referencePart == nil then
+			referencePart = part
+			surfaceNormal = normal
+		end
+		virtualUndo.install()
+		changeSignal:Fire()
+	end
+	session.TestRemoveLastVertex = function()
+		if #vertices > 0 then
+			table.remove(vertices, #vertices)
+			if #vertices == 0 then
+				referencePart = nil
+				virtualUndo.uninstall()
+			end
+			changeSignal:Fire()
+		end
+	end
+	-- Set state directly without virtualUndo (avoids ChangeHistory yield in tests)
+	session.TestSetState = function(verts: { Vector3 }, refPart: BasePart?, normal: Vector3?)
+		vertices = verts
+		referencePart = refPart
+		surfaceNormal = normal
+		changeSignal:Fire()
+	end
+
 	return session
 end
 
