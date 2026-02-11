@@ -47,7 +47,7 @@ end
 
 -- Calculate the result
 -- Returns the list of created parts on success, or nil on failure
-local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessOverride: number?, forceFactor: number): { BasePart }?
+local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessOverride: number?, forceFactor: number, desiredSurfaceNormal: Vector3?): { BasePart }?
 	local createdParts: { BasePart } = {}
 
 	local function fill(a, b, c, normalHint)
@@ -122,20 +122,27 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		local width = (ca + ab.unit*len1).magnitude
 
 		--calculate "base" CFrame to pasition parts by
-		local normal = ab:Cross(bc).unit
-		local maincf = CFrameFromTopBack(a, normal, -ab.unit)
+		local intoSurfaceNormal = ab:Cross(bc).unit
+		local maincf = CFrameFromTopBack(a, intoSurfaceNormal, -ab.unit)
 
-		-- Figure out if we need to flip the normal
+		-- Figure out if we need to flip the normal so the fill goes into
+		-- the geometry (flush with the clicked surface)
 		local flip = 1
-		if (edgeA.part.Position - a):Dot(normal) < 0 then
-			flip = -1
+		if desiredSurfaceNormal then
+			if intoSurfaceNormal:Dot(desiredSurfaceNormal) > 0 then
+				flip = -1
+			end
+		else
+			if (edgeA.part.Position - a):Dot(intoSurfaceNormal) < 0 then
+				flip = -1
+			end
 		end
 
 		-- See what depth to use
 		local depth = -math.huge
 		if not edgeA.inferred then
 			for _, v in pairs(getPoints(edgeA.part)) do
-				local d = (v - a):Dot(normal*flip)
+				local d = (v - a):Dot(intoSurfaceNormal*flip)
 				if d > depth then
 					depth = d
 				end
@@ -143,7 +150,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		end
 		if not edgeB.inferred then
 			for _, v in pairs(getPoints(edgeB.part)) do
-				local d = (v - a):Dot(normal*flip)
+				local d = (v - a):Dot(intoSurfaceNormal*flip)
 				if d > depth then
 					depth = d
 				end
@@ -177,7 +184,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		flip *= extrudeDirectionModifier
 
 		if normalHint then
-			if (normal*flip):Dot(normalHint) < 0 then
+			if (intoSurfaceNormal*flip):Dot(normalHint) < 0 then
 				flip = -flip
 			end
 		end
@@ -195,7 +202,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			part2.Parent = parent
 			table.insert(createdParts, part2)
 		end
-		return normal*flip
+		return intoSurfaceNormal*flip
 	end
 
 	if close(edgeA.direction, edgeB.direction) or close(edgeA.direction, -edgeB.direction) then
@@ -255,9 +262,15 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			local perpDir = -normal:Cross(axis)
 			local perpLen = ((edgeA.a + edgeA.direction*(edgeB.a - edgeA.a):Dot(edgeA.direction)) - edgeB.a).magnitude
 
-			-- See if we need to flip the normal, if the mass is mostly on the back-side of the normal
-			if (edgeA.part.Position - point):Dot(normal) < 0 then
-				normal = -normal
+			-- See if we need to flip the normal so the fill goes into the geometry
+			if desiredSurfaceNormal then
+				if normal:Dot(desiredSurfaceNormal) > 0 then
+					normal = -normal
+				end
+			else
+				if (edgeA.part.Position - point):Dot(normal) < 0 then
+					normal = -normal
+				end
 			end
 
 			-- Now, find the thickness that we need for the fill. For the thickness use the

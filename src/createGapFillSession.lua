@@ -128,10 +128,12 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 
 	local mState: "EdgeA" | "EdgeB" = "EdgeA"
 	local mEdgeA: any = nil
+	local mSurfaceNormal: Vector3? = nil
 	local mHoverEdge: EdgeArrow.EdgeData? = nil
 
 	local function clearEdgeA()
 		mEdgeA = nil
+		mSurfaceNormal = nil
 	end
 
 	local function resetToEdgeA()
@@ -238,6 +240,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 				local edge = getHoverEdge()
 				if edge then
 					mEdgeA = edge
+					mSurfaceNormal = result.Normal
 					mState = "EdgeB"
 					changeSignal:Fire()
 				end
@@ -279,7 +282,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[4],
 							b = theFace.vertices[3],
 						}
-						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor))
+						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal))
 					elseif #theFace.vertices == 3 then
 						local edge1 = prepEdge{
 							a = theFace.vertices[1],
@@ -289,11 +292,11 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[1],
 							b = theFace.vertices[3],
 						}
-						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor))
+						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal))
 					end
 				else
 					-- Different parts — normal fill
-					tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor))
+					tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor, mSurfaceNormal))
 				end
 
 				if recording then
