@@ -2,10 +2,6 @@
 
 local copyPartProps = require("./copyPartProps")
 
-local function CFrameFromTopBack(at, top, back)
-	return CFrame.fromMatrix(at, top:Cross(back), top, back)
-end
-
 export type FillTriangleParams = {
 	referencePart: BasePart,
 	secondaryPart: BasePart?,
@@ -96,7 +92,7 @@ local function fillTriangle(
 
 	--calculate "base" CFrame to position parts by
 	local normal = ab:Cross(bc).unit
-	local maincf = CFrameFromTopBack(a, normal, -ab.unit)
+	local maincf = CFrame.fromMatrix(a, normal:Cross(-ab.unit), normal, -ab.unit)
 
 	-- Figure out if we need to flip the normal so the fill goes into
 	-- the geometry (flush with the clicked surface)

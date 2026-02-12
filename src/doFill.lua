@@ -6,10 +6,6 @@ local Geometry = require(Packages.Geometry)
 local copyPartProps = require(script.Parent.copyPartProps)
 local fillTriangle = require("./fillTriangle")
 
-local function CFrameFromTopBack(at, top, back)
-	return CFrame.fromMatrix(at, top:Cross(back), top, back)
-end
-
 local function close(a, b)
 	return (a - b).magnitude < 0.001
 end
@@ -213,7 +209,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 
 			local position = point + axis*((axisMin + axisMax)/2) + perpDir*(perpLen/2) + normal*(thickness/2)
 			local size = Vector3.new(perpLen, thickness, (axisMax - axisMin))
-			local cf = CFrameFromTopBack(position, normal, axis)
+			local cf = CFrame.fromMatrix(position, normal:Cross(axis), normal, axis)
 
 			-- Note, we can't just use a clone here because edgeA.part may be a non-square part
 			-- and we can't change the className.
