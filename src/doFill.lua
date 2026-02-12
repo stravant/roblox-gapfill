@@ -4,6 +4,7 @@ local Packages = Src.Parent.Packages
 local Geometry = require(Packages.Geometry)
 
 local copyPartProps = require(script.Parent.copyPartProps)
+local fillTriangle = require("./fillTriangle")
 
 local function CFrameFromTopBack(at, top, back)
 	return CFrame.fromMatrix(at, top:Cross(back), top, back)
@@ -37,164 +38,84 @@ local function getPoints(part)
 	return points
 end
 
+-- Compute the depth (thickness) for a triangle fill based on edge part geometry.
+-- The triangle normal is rotation-invariant, so we can compute it from any vertex ordering.
+local function computeTriangleDepth(
+	a, b, c,
+	edgeA, edgeB,
+	desiredSurfaceNormal: Vector3?,
+	thicknessOverride: number?
+): number
+	if thicknessOverride then
+		return thicknessOverride
+	end
+
+	local normal = (b - a):Cross(c - b)
+	if normal.Magnitude < 1e-6 then
+		return 0.05
+	end
+	normal = normal.Unit
+
+	-- Determine flip direction (same logic as fillTriangle uses internally)
+	local flip = 1
+	if desiredSurfaceNormal then
+		if normal:Dot(desiredSurfaceNormal) > 0 then
+			flip = -1
+		end
+	else
+		if (edgeA.part.Position - a):Dot(normal) < 0 then
+			flip = -1
+		end
+	end
+
+	-- Calculate depth from part vertices along the normal direction
+	local depth = -math.huge
+	if not edgeA.inferred then
+		for _, v in pairs(getPoints(edgeA.part)) do
+			local d = (v - a):Dot(normal * flip)
+			if d > depth then
+				depth = d
+			end
+		end
+	end
+	if not edgeB.inferred then
+		for _, v in pairs(getPoints(edgeB.part)) do
+			local d = (v - a):Dot(normal * flip)
+			if d > depth then
+				depth = d
+			end
+		end
+	end
+
+	if edgeA.inferred and edgeB.inferred then
+		depth = 0.05
+	end
+
+	return depth
+end
+
 -- Calculate the result
 -- Returns the list of created parts on success, or nil on failure
 local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessOverride: number?, forceFactor: number, desiredSurfaceNormal: Vector3?): { BasePart }?
 	local createdParts: { BasePart } = {}
 
+	local parent;
+	if edgeA.part.Parent == edgeB.part.Parent then
+		parent = edgeA.part.Parent
+	else
+		parent = workspace
+	end
+
 	local function fill(a, b, c, normalHint)
-		--[[       edg1
-			A ------|------>B  --.
-			'\      |      /      \
-			  \part1|part2/       |
-			   \   cut   /       / Direction edges point in:
-		   edg3 \       / edg2  /        (clockwise)
-			     \     /      |/
-			      \<- /       ¯¯
-			       \ /
-			        C
-		--]]
-		local ab, bc, ca = b-a, c-b, a-c
-		local abm, bcm, cam = ab.magnitude, bc.magnitude, ca.magnitude
-		local e1, e2, e3 = ca:Dot(ab)/(abm*abm), ab:Dot(bc)/(bcm*bcm), bc:Dot(ca)/(cam*cam)
-		local edg1 = math.abs(0.5 + e1)
-		local edg2 = math.abs(0.5 + e2)
-		local edg3 = math.abs(0.5 + e3)
-		-- Idea: Find the edge onto which the vertex opposite that
-		-- edge has the projection closest to 1/2 of the way along that
-		-- edge. That is the edge thatwe want to split on in order to
-		-- avoid ending up with small "sliver" triangles with one very
-		-- small dimension relative to the other one.
-		if math.abs(e1) > 0.0001 and math.abs(e2) > 0.0001 and math.abs(e3) > 0.0001 then
-			if edg1 < edg2 then
-				if edg1 < edg3 then
-					-- min is edg1: less than both
-					-- nothing to change
-				else
-					-- min is edg3: edg3 < edg1 < edg2
-					-- "rotate" verts twice counterclockwise
-					a, b, c = c, a, b
-					ab, bc, ca = ca, ab, bc
-					abm = cam
-				end
-			else
-				if edg2 < edg3 then
-					-- min is edg2: less than both
-					-- "rotate" verts once counterclockwise
-					a, b, c = b, c, a
-					ab, bc, ca = bc, ca, ab
-					abm = bcm
-				else
-					-- min is edg3: edg3 < edg2 < edg1
-					-- "rotate" verts twice counterclockwise
-					a, b, c = c, a, b
-					ab, bc, ca = ca, ab, bc
-					abm = cam
-				end
-			end
-		else
-			if math.abs(e1) <= 0.0001 then
-				-- nothing to do
-			elseif math.abs(e2) <= 0.0001 then
-				-- use e2
-				a, b, c = b, c, a
-				ab, bc, ca = bc, ca, ab
-				abm = bcm
-			else
-				-- use e3
-				a, b, c = c, a, b
-				ab, bc, ca = ca, ab, bc
-				abm = cam
-			end
-		end
-
-		--calculate lengths
-		local len1 = -ca:Dot(ab)/abm
-		local len2 = abm - len1
-		local width = (ca + ab.unit*len1).magnitude
-
-		--calculate "base" CFrame to pasition parts by
-		local intoSurfaceNormal = ab:Cross(bc).unit
-		local maincf = CFrameFromTopBack(a, intoSurfaceNormal, -ab.unit)
-
-		-- Figure out if we need to flip the normal so the fill goes into
-		-- the geometry (flush with the clicked surface)
-		local flip = 1
-		if desiredSurfaceNormal then
-			if intoSurfaceNormal:Dot(desiredSurfaceNormal) > 0 then
-				flip = -1
-			end
-		else
-			if (edgeA.part.Position - a):Dot(intoSurfaceNormal) < 0 then
-				flip = -1
-			end
-		end
-
-		-- See what depth to use
-		local depth = -math.huge
-		if not edgeA.inferred then
-			for _, v in pairs(getPoints(edgeA.part)) do
-				local d = (v - a):Dot(intoSurfaceNormal*flip)
-				if d > depth then
-					depth = d
-				end
-			end
-		end
-		if not edgeB.inferred then
-			for _, v in pairs(getPoints(edgeB.part)) do
-				local d = (v - a):Dot(intoSurfaceNormal*flip)
-				if d > depth then
-					depth = d
-				end
-			end
-		end
-
-		if thicknessOverride then
-			depth = thicknessOverride
-		elseif edgeA.inferred and edgeB.inferred then
-			-- No good way to determine thickness
-			depth = 0.05
-		end
-
-		local parent;
-		if edgeA.part.Parent == edgeB.part.Parent then
-			parent = edgeA.part.Parent
-		else
-			parent = workspace
-		end
-		local part1 = Instance.new('Part')
-		part1.Shape = Enum.PartType.Wedge
-		part1.TopSurface    = Enum.SurfaceType.Smooth
-		part1.BottomSurface = Enum.SurfaceType.Smooth
-		copyPartProps(edgeA.part, part1)
-		local part2 = part1:Clone()
-
-		-- Apply flipping mode
-		flip *= forceFactor
-
-		-- Apply extra flipping if in extrude mode
-		flip *= extrudeDirectionModifier
-
-		if normalHint then
-			if (intoSurfaceNormal*flip):Dot(normalHint) < 0 then
-				flip = -flip
-			end
-		end
-
-		--make parts
-		if len1 > 0.001 then
-			part1.Size = Vector3.new(depth, width, len1)
-			part1.CFrame = maincf*CFrame.Angles(math.pi, 0, math.pi/2)*CFrame.new(flip*(-depth/2), width/2, len1/2)
-			part1.Parent = parent
-			table.insert(createdParts, part1)
-		end
-		if len2 > 0.001 then
-			part2.Size = Vector3.new(depth, width, len2)
-			part2.CFrame = maincf*CFrame.Angles(math.pi, math.pi, -math.pi/2)*CFrame.new(flip*(depth/2), width/2, -len1 - len2/2)
-			part2.Parent = parent
-			table.insert(createdParts, part2)
-		end
-		return intoSurfaceNormal*flip
+		local depth = computeTriangleDepth(a, b, c, edgeA, edgeB, desiredSurfaceNormal, thicknessOverride)
+		return fillTriangle(a, b, c, normalHint, {
+			referencePart = edgeA.part,
+			parent = parent,
+			thickness = depth,
+			forceFactor = forceFactor,
+			extrudeDirectionModifier = extrudeDirectionModifier,
+			desiredSurfaceNormal = desiredSurfaceNormal,
+		}, createdParts)
 	end
 
 	if close(edgeA.direction, edgeB.direction) or close(edgeA.direction, -edgeB.direction) then
@@ -297,11 +218,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			-- Note, we can't just use a clone here because edgeA.part may be a non-square part
 			-- and we can't change the className.
 			local part = Instance.new('Part')
-			if edgeA.part.Parent == edgeB.part.Parent then
-				part.Parent = edgeA.part.Parent
-			else
-				part.Parent = workspace
-			end
+			part.Parent = parent
 			part.TopSurface = Enum.SurfaceType.Smooth
 			part.BottomSurface = Enum.SurfaceType.Smooth
 			copyPartProps(edgeA.part, part)

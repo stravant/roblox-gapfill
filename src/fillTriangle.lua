@@ -13,6 +13,7 @@ export type FillTriangleParams = {
 	thickness: number,
 	forceFactor: number,
 	extrudeDirectionModifier: number,
+	desiredSurfaceNormal: Vector3?,
 }
 
 -- Fill a single triangle with wedge parts.
@@ -97,10 +98,17 @@ local function fillTriangle(
 	local normal = ab:Cross(bc).unit
 	local maincf = CFrameFromTopBack(a, normal, -ab.unit)
 
-	-- Figure out if we need to flip the normal
+	-- Figure out if we need to flip the normal so the fill goes into
+	-- the geometry (flush with the clicked surface)
 	local flip = 1
-	if (params.referencePart.Position - a):Dot(normal) < 0 then
-		flip = -1
+	if params.desiredSurfaceNormal then
+		if normal:Dot(params.desiredSurfaceNormal) > 0 then
+			flip = -1
+		end
+	else
+		if (params.referencePart.Position - a):Dot(normal) < 0 then
+			flip = -1
+		end
 	end
 
 	-- See what depth to use
