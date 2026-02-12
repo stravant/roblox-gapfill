@@ -2,21 +2,10 @@ local TestTypes = require(script.Parent.TestTypes)
 type TestContext = TestTypes.TestContext
 
 local createPolygonFillSession = require(script.Parent.createPolygonFillSession)
+local TestHelpers = require(script.Parent.TestHelpers)
 
 local function makeTestSettings()
-	return {
-		WindowPosition = Vector2.zero,
-		WindowAnchor = Vector2.zero,
-		WindowHeightDelta = 0,
-		DoneTutorial = false,
-		HaveHelp = false,
-		FlipDirection = false,
-		ThicknessMode = "OneStud",
-		CustomThickness = 0.2,
-		UnionResults = false,
-		ClassicUI = false,
-		FillMode = "Polygon",
-	}
+	return TestHelpers.makeTestSettings({ FillMode = "Polygon" })
 end
 
 return function(t: TestContext)

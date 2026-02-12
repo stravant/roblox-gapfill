@@ -2,34 +2,10 @@ local TestTypes = require(script.Parent.TestTypes)
 type TestContext = TestTypes.TestContext
 
 local createGapFillSession = require(script.Parent.createGapFillSession)
+local TestHelpers = require(script.Parent.TestHelpers)
 
-local function makeTestSettings()
-	return {
-		WindowPosition = Vector2.zero,
-		WindowAnchor = Vector2.zero,
-		WindowHeightDelta = 0,
-		DoneTutorial = false,
-		HaveHelp = false,
-		FlipDirection = false,
-		ThicknessMode = "OneStud",
-		CustomThickness = 0.2,
-		UnionResults = false,
-		ClassicUI = false,
-		FillMode = "Edge",
-	}
-end
-
-local function makeEdge(a: Vector3, b: Vector3, part: BasePart)
-	return {
-		a = a,
-		b = b,
-		direction = (b - a).Unit,
-		length = (b - a).Magnitude,
-		part = part,
-		click = (a + b) / 2,
-		inferred = false,
-	}
-end
+local makeTestSettings = TestHelpers.makeTestSettings
+local makeEdge = TestHelpers.makeEdge
 
 return function(t: TestContext)
 	--
