@@ -21,7 +21,6 @@ local function doPolygonFill(
 
 	local params: fillTriangle.FillTriangleParams = {
 		referencePart = referencePart,
-		secondaryPart = nil,
 		parent = actualParent,
 		thickness = thickness,
 		forceFactor = 1,

@@ -4,7 +4,6 @@ local copyPartProps = require("./copyPartProps")
 
 export type FillTriangleParams = {
 	referencePart: BasePart,
-	secondaryPart: BasePart?,
 	parent: Instance,
 	thickness: number,
 	forceFactor: number,
