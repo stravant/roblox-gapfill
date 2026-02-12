@@ -1,3 +1,5 @@
+--!strict
+
 local copyPartProps = require("./copyPartProps")
 
 local function CFrameFromTopBack(at, top, back)

@@ -1,3 +1,5 @@
+--!strict
+
 local fillTriangle = require("./fillTriangle")
 
 -- Fan triangulation: create wedge parts filling the polygon defined by vertices.
