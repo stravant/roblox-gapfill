@@ -11,8 +11,8 @@ local DraggerHandler = require(Packages.DraggerHandler)
 local Signal = require(Packages.Signal)
 
 local doFill = require(Src.doFill)
-local copyPartProps = require(Src.copyPartProps)
 local Settings = require("./Settings")
+local SessionUtils = require("./SessionUtils")
 local EdgeArrow = require("./EdgeArrow")
 
 type GeometryEdge = typeof(Geometry.getGeometry(...).edges[1])
@@ -64,11 +64,7 @@ local function getHoverEdgeSimple(hit: RaycastResult): (GeometryEdgeWithClick?, 
 	return assert(bestEdge), bestFace
 end
 
-local function mouseRaycast(): RaycastResult?
-	local screenLoc = UserInputService:GetMouseLocation()
-	local ray = workspace.CurrentCamera:ScreenPointToRay(screenLoc.X, screenLoc.Y)
-	return workspace:Raycast(ray.Origin, ray.Direction * 9999)
-end
+local mouseRaycast = SessionUtils.mouseRaycast
 
 local function getPrimaryEdge(result: RaycastResult): (GeometryEdgeWithClick?, GeometryFace?)
 	if result.Instance:IsA("MeshPart") or result.Instance:IsA("UnionOperation") then
@@ -94,21 +90,7 @@ local function isCtrlHeld()
 	return UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
 end
 
-local function startRecording(): string?
-	return ChangeHistoryService:TryBeginRecording("GapFill", "GapFill Changes")
-end
-local function commitRecording(id: string)
-	ChangeHistoryService:FinishRecording(id, Enum.FinishRecordingOperation.Commit)
-end
-
-local function getCameraDepth(point: Vector3): number
-	local camera = workspace.CurrentCamera
-	if camera then
-		return math.abs(camera:WorldToViewportPoint(point).Z)
-	else
-		return 40
-	end
-end
+local getCameraDepth = SessionUtils.getCameraDepth
 
 local function edgesMatch(a: EdgeArrow.EdgeData?, b: EdgeArrow.EdgeData?): boolean
 	if a == nil and b == nil then
@@ -153,48 +135,8 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 		end
 	end
 
-	local function getThicknessOverride(): number?
-		if currentSettings.ThicknessMode == "OneStud" then
-			return 1
-		elseif currentSettings.ThicknessMode == "Custom" then
-			return currentSettings.CustomThickness
-		elseif currentSettings.ThicknessMode == "Plate" then
-			return 0.2
-		elseif currentSettings.ThicknessMode == "Thinnest" then
-			return 0.05
-		else
-			return nil
-		end
-	end
-
-	local function getForceFactor(): number
-		if currentSettings.FlipDirection then
-			return -1
-		else
-			return 1
-		end
-	end
-
 	local function tryUnionParts(parts: { BasePart }?)
-		if not parts or #parts < 2 or not currentSettings.UnionResults then
-			return
-		end
-		local first = parts[1]
-		local rest = {}
-		for i = 2, #parts do
-			table.insert(rest, parts[i])
-		end
-		local ok, union = pcall(function()
-			return first:UnionAsync(rest)
-		end)
-		if ok and union then
-			union.Parent = first.Parent
-			union.UsePartColor = true
-			copyPartProps(first, union)
-			for _, part in parts do
-				part:Destroy()
-			end
-		end
+		SessionUtils.tryUnionParts(parts, currentSettings)
 	end
 
 	local isOverUI = false
@@ -259,10 +201,10 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 					return
 				end
 
-				local thicknessOverride = getThicknessOverride()
-				local forceFactor = getForceFactor()
+				local thicknessOverride = SessionUtils.getThicknessOverride(currentSettings)
+				local forceFactor = SessionUtils.getForceFactor(currentSettings)
 
-				local recording = startRecording()
+				local recording = SessionUtils.startRecording("GapFill Changes")
 
 				if theFace and savedEdgeA and savedEdgeA.part == hoverFace.part then
 					-- Same part — extrude on the selected face
@@ -300,7 +242,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 				end
 
 				if recording then
-					commitRecording(recording)
+					SessionUtils.commitRecording(recording)
 				else
 					warn("GapFill: ChangeHistory Recording failed, fall back to adding waypoint.")
 					ChangeHistoryService:SetWaypoint("GapFill")

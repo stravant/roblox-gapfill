@@ -10,17 +10,13 @@ local Geometry = require(Packages.Geometry)
 local Signal = require(Packages.Signal)
 
 local doPolygonFill = require(Src.doPolygonFill)
-local copyPartProps = require(Src.copyPartProps)
 local createVirtualUndo = require("./createVirtualUndo")
 local Settings = require("./Settings")
+local SessionUtils = require("./SessionUtils")
 
 type GeometryEdge = typeof(Geometry.getGeometry(...).edges[1])
 
-local function mouseRaycast(): RaycastResult?
-	local screenLoc = UserInputService:GetMouseLocation()
-	local ray = workspace.CurrentCamera:ScreenPointToRay(screenLoc.X, screenLoc.Y)
-	return workspace:Raycast(ray.Origin, ray.Direction * 9999)
-end
+local mouseRaycast = SessionUtils.mouseRaycast
 
 local function getClosestVertex(hit: RaycastResult): (Vector3?, BasePart?)
 	local point = hit.Position
@@ -39,24 +35,10 @@ local function getClosestVertex(hit: RaycastResult): (Vector3?, BasePart?)
 	end
 end
 
-local function getCameraDepth(point: Vector3): number
-	local camera = workspace.CurrentCamera
-	if camera then
-		return math.abs(camera:WorldToViewportPoint(point).Z)
-	else
-		return 40
-	end
-end
+local getCameraDepth = SessionUtils.getCameraDepth
 
 local function verticesMatch(a: Vector3, b: Vector3): boolean
 	return (a - b).Magnitude < 0.001
-end
-
-local function startRecording(): string?
-	return ChangeHistoryService:TryBeginRecording("GapFill", "Polygon Fill")
-end
-local function commitRecording(id: string)
-	ChangeHistoryService:FinishRecording(id, Enum.FinishRecordingOperation.Commit)
 end
 
 local function createPolygonFillSession(plugin: Plugin, currentSettings: Settings.GapFillSettings)
@@ -70,50 +52,8 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 	local hoverVertex: Vector3? = nil
 	local isNearFirst = false
 
-	local function getThicknessOverride(): number
-		if currentSettings.ThicknessMode == "OneStud" then
-			return 1
-		elseif currentSettings.ThicknessMode == "Custom" then
-			return currentSettings.CustomThickness
-		elseif currentSettings.ThicknessMode == "Plate" then
-			return 0.2
-		elseif currentSettings.ThicknessMode == "Thinnest" then
-			return 0.05
-		else
-			-- BestGuess: default to a reasonable thin value for polygon mode
-			-- since we don't have edge-based depth inference
-			return 0.2
-		end
-	end
-
-	local function getForceFactor(): number
-		if currentSettings.FlipDirection then
-			return -1
-		else
-			return 1
-		end
-	end
-
 	local function tryUnionParts(parts: { BasePart }?)
-		if not parts or #parts < 2 or not currentSettings.UnionResults then
-			return
-		end
-		local first = parts[1]
-		local rest = {}
-		for i = 2, #parts do
-			table.insert(rest, parts[i])
-		end
-		local ok, union = pcall(function()
-			return first:UnionAsync(rest)
-		end)
-		if ok and union then
-			union.Parent = first.Parent
-			union.UsePartColor = true
-			copyPartProps(first, union)
-			for _, part in parts do
-				part:Destroy()
-			end
-		end
+		SessionUtils.tryUnionParts(parts, currentSettings)
 	end
 
 	local function resetVertices()
@@ -139,17 +79,19 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 
 		virtualUndo.uninstall()
 
-		local recording = startRecording()
+		local recording = SessionUtils.startRecording("Polygon Fill")
 
-		local thickness = getThicknessOverride()
-		local forceFactor = getForceFactor()
+		-- Polygon mode can't infer thickness from geometry like edge mode can,
+		-- so default BestGuess to 0.2 studs
+		local thickness = SessionUtils.getThicknessOverride(currentSettings) or 0.2
+		local forceFactor = SessionUtils.getForceFactor(currentSettings)
 		local parent = refPart.Parent or workspace
 
 		local parts = doPolygonFill(vertices, refPart, surfaceNormal, thickness, forceFactor, parent)
 		tryUnionParts(parts)
 
 		if recording then
-			commitRecording(recording)
+			SessionUtils.commitRecording(recording)
 		else
 			warn("GapFill: ChangeHistory Recording failed, fall back to adding waypoint.")
 			ChangeHistoryService:SetWaypoint("Polygon Fill")
