@@ -18,6 +18,7 @@ local PluginGuiTypes = require("./PluginGui/Types")
 local EdgeArrow = require("./EdgeArrow")
 local VertexMarker = require("./VertexMarker")
 local WireframeEdge = require("./WireframeEdge")
+local TriangleHighlight = require("./TriangleHighlight")
 
 local e = React.createElement
 
@@ -234,59 +235,6 @@ local function OptionsPanel(props: {
 	})
 end
 
-local function _PolygonActionButtons(props: {
-	HandleAction: (string) -> (),
-	VertexCount: number,
-	LayoutOrder: number?,
-})
-	local canDone = props.VertexCount >= 3
-	local canReset = props.VertexCount > 0
-	return e("Frame", {
-		Size = UDim2.fromScale(1, 0),
-		BackgroundTransparency = 1,
-		LayoutOrder = props.LayoutOrder,
-		AutomaticSize = Enum.AutomaticSize.Y,
-	}, {
-		Layout = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 4),
-		}),
-		DoneButton = e("Frame", {
-			Size = UDim2.new(0.5, -2, 0, 0),
-			BackgroundTransparency = 1,
-			AutomaticSize = Enum.AutomaticSize.Y,
-			LayoutOrder = 1,
-		}, {
-			Button = e(OperationButton, {
-				Text = "Done",
-				Color = Colors.ACTION_BLUE,
-				Disabled = not canDone,
-				Height = 30,
-				OnClick = function()
-					props.HandleAction("commitPolygon")
-				end,
-			}),
-		}),
-		ResetButton = e("Frame", {
-			Size = UDim2.new(0.5, -2, 0, 0),
-			BackgroundTransparency = 1,
-			AutomaticSize = Enum.AutomaticSize.Y,
-			LayoutOrder = 2,
-		}, {
-			Button = e(OperationButton, {
-				Text = "Reset",
-				Color = Colors.DARK_RED,
-				Disabled = not canReset,
-				Height = 30,
-				OnClick = function()
-					props.HandleAction("resetPolygon")
-				end,
-			}),
-		}),
-	})
-end
-
 local function FillModePanel(props: {
 	Settings: Settings.GapFillSettings,
 	UpdatedSettings: () -> (),
@@ -385,17 +333,6 @@ local function FillModePanel(props: {
 				CornerRadius = UDim.new(0, 4),
 			}),
 		}),
-		-- I don't think I want to waste space on these action buttons
-		-- It's clear enough what to do with clicking and actually more
-		-- convinient to do it that way. Not having a reset button could be
-		-- annoying but you could just close and reopen the tool if you have
-		-- to back out of many selected vertices. Or finish the placement and
-		-- undo.
-		-- PolygonActions = isPolygon and e(PolygonActionButtons, {
-		-- 	HandleAction = props.HandleAction,
-		-- 	VertexCount = props.VertexCount,
-		-- 	LayoutOrder = 3,
-		-- }),
 	})
 end
 
@@ -621,6 +558,30 @@ local function AdornmentOverlay(props: {
 					ZIndexOffset = 2,
 				})
 			end
+		end
+
+		-- Render confirmed fan triangles (fan from vertex 1)
+		for i = 2, #vertices - 1 do
+			children["FanTri" .. tostring(i)] = e(TriangleHighlight, {
+				A = vertices[1],
+				B = vertices[i],
+				C = vertices[i + 1],
+				Color = selectedColor,
+				Transparency = 0.5,
+				ZIndexOffset = 0,
+			})
+		end
+
+		-- Render tentative triangle with hover vertex
+		if hoverVertex and not hoverOnSelected and #vertices >= 2 then
+			children.HoverTri = e(TriangleHighlight, {
+				A = vertices[1],
+				B = vertices[#vertices],
+				C = hoverVertex,
+				Color = hoverColor,
+				Transparency = 0.5,
+				ZIndexOffset = 0,
+			})
 		end
 	else
 		-- Edge mode adornments (existing behavior)
