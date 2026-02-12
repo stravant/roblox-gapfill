@@ -5,15 +5,7 @@ local Geometry = require(Packages.Geometry)
 
 local copyPartProps = require(script.Parent.copyPartProps)
 
--- Mesh no longer needed because min part size is now 0.001 which you would
--- realistically have problems going smaller than anyways. This was historically
--- needed back when min part size was 0.05 and you frequently did need to go
--- smaller than that using a SpecialMesh.
-local function setPartSizeWithMeshIfNeeded(part, meshType: Enum.MeshType, a, b, c)
-	part.Size = Vector3.new(a, b, c)
-end
-
-function CFrameFromTopBack(at, top, back)
+local function CFrameFromTopBack(at, top, back)
 	return CFrame.fromMatrix(at, top:Cross(back), top, back)
 end
 
@@ -191,13 +183,13 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 
 		--make parts
 		if len1 > 0.001 then
-			setPartSizeWithMeshIfNeeded(part1, Enum.MeshType.Wedge, depth, width, len1)
+			part1.Size = Vector3.new(depth, width, len1)
 			part1.CFrame = maincf*CFrame.Angles(math.pi, 0, math.pi/2)*CFrame.new(flip*(-depth/2), width/2, len1/2)
 			part1.Parent = parent
 			table.insert(createdParts, part1)
 		end
 		if len2 > 0.001 then
-			setPartSizeWithMeshIfNeeded(part2, Enum.MeshType.Wedge, depth, width, len2)
+			part2.Size = Vector3.new(depth, width, len2)
 			part2.CFrame = maincf*CFrame.Angles(math.pi, math.pi, -math.pi/2)*CFrame.new(flip*(depth/2), width/2, -len1 - len2/2)
 			part2.Parent = parent
 			table.insert(createdParts, part2)
@@ -313,7 +305,7 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			part.TopSurface = Enum.SurfaceType.Smooth
 			part.BottomSurface = Enum.SurfaceType.Smooth
 			copyPartProps(edgeA.part, part)
-			setPartSizeWithMeshIfNeeded(part, Enum.MeshType.Brick, size.X, size.Y, size.Z)
+			part.Size = size
 			part.CFrame = cf
 			table.insert(createdParts, part)
 		end
