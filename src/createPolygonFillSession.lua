@@ -52,10 +52,6 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 	local hoverVertex: Vector3? = nil
 	local isNearFirst = false
 
-	local function tryUnionParts(parts: { BasePart }?)
-		SessionUtils.tryUnionParts(parts, currentSettings)
-	end
-
 	local function resetVertices()
 		if #vertices > 0 then
 			virtualUndo.uninstall()
@@ -88,7 +84,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		local parent = refPart.Parent or workspace
 
 		local parts = doPolygonFill(vertices, refPart, surfaceNormal, thickness, forceFactor, parent)
-		tryUnionParts(parts)
+		SessionUtils.tryUnionParts(parts, currentSettings)
 
 		if recording then
 			SessionUtils.commitRecording(recording)
