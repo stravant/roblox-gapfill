@@ -1,3 +1,5 @@
+local Selection = game:GetService("Selection")
+
 local TestTypes = require(script.Parent.TestTypes)
 type TestContext = TestTypes.TestContext
 
@@ -205,6 +207,73 @@ return function(t: TestContext)
 		session.ResetVertices()
 		t.expect(#session.GetVertices()).toBe(0)
 		t.expect(session.GetReferencePart() == nil).toBe(true)
+
+		session.Destroy()
+		cleanupAll()
+	end)
+
+	--
+	-- SelectResults selects created parts after commit
+	--
+	t.test("SelectResults selects created parts after commit", function()
+		local settings = TestHelpers.makeTestSettings({ FillMode = "Polygon", SelectResults = true })
+		local session = createPolygonFillSession(t.plugin, settings)
+		local part = Instance.new("Part")
+		part.Parent = workspace
+		track(part)
+
+		Selection:Set({})
+
+		session.TestSetState(
+			{Vector3.new(0, 0, 0), Vector3.new(2, 0, 0), Vector3.new(0, 0, 2)},
+			part,
+			Vector3.yAxis
+		)
+
+		session.CommitPolygon()
+
+		local selected = Selection:Get()
+		t.expect(#selected > 0).toBe(true)
+
+		-- All selected items should be BaseParts in workspace
+		for _, sel in selected do
+			t.expect(sel:IsA("BasePart")).toBe(true)
+			t.expect(sel.Parent).toBe(workspace)
+			track(sel)
+		end
+
+		session.Destroy()
+		cleanupAll()
+	end)
+
+	--
+	-- SelectResults off does not change selection
+	--
+	t.test("SelectResults off does not change selection", function()
+		local settings = TestHelpers.makeTestSettings({ FillMode = "Polygon", SelectResults = false })
+		local session = createPolygonFillSession(t.plugin, settings)
+		local part = Instance.new("Part")
+		part.Parent = workspace
+		track(part)
+
+		Selection:Set({})
+
+		session.TestSetState(
+			{Vector3.new(0, 0, 0), Vector3.new(2, 0, 0), Vector3.new(0, 0, 2)},
+			part,
+			Vector3.yAxis
+		)
+
+		session.CommitPolygon()
+
+		t.expect(#Selection:Get()).toBe(0)
+
+		-- Clean up created parts
+		for _, child in workspace:GetChildren() do
+			if child:IsA("BasePart") and not child:IsA("Terrain") and child ~= part then
+				track(child)
+			end
+		end
 
 		session.Destroy()
 		cleanupAll()
