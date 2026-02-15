@@ -1,6 +1,7 @@
 --!strict
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local Selection = game:GetService("Selection")
 local UserInputService = game:GetService("UserInputService")
 
 local Src = script.Parent
@@ -88,7 +89,11 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		local recording = SessionUtils.startRecording("Polygon Fill")
 
 		local parts = doPolygonFill(verticesToUse, refPart, normalToUse, thickness, forceFactor, parent)
-		SessionUtils.tryUnionParts(parts, currentSettings, refPart)
+		local resultParts = SessionUtils.tryUnionParts(parts, currentSettings, refPart)
+
+		if currentSettings.SelectResults and resultParts then
+			Selection:Set((resultParts :: any) :: { Instance })
+		end
 
 		if recording then
 			SessionUtils.commitRecording(recording)

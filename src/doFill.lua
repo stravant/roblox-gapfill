@@ -54,11 +54,17 @@ local function computeTriangleDepth(
 
 	-- Determine flip direction (same logic as fillTriangle uses internally)
 	local flip = 1
+	local flipDetermined = false
 	if desiredSurfaceNormal then
-		if normal:Dot(desiredSurfaceNormal) > 0 then
-			flip = -1
+		local dot = normal:Dot(desiredSurfaceNormal)
+		if math.abs(dot) > 0.1 then
+			if dot > 0 then
+				flip = -1
+			end
+			flipDetermined = true
 		end
-	else
+	end
+	if not flipDetermined then
 		if (edgeA.part.Position - a):Dot(normal) < 0 then
 			flip = -1
 		end
@@ -142,8 +148,8 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 		if axisMax <= axisMin then
 			-- Case 1a)
 			-- There is no square part to draw, just draw 2 triangles
-			fill(edgeA.a, edgeA.b, edgeB.a)
-			fill(edgeB.a, edgeB.b, edgeA.b)
+			local hint = fill(edgeA.a, edgeA.b, edgeB.a)
+			fill(edgeB.a, edgeB.b, edgeA.b, hint)
 		else
 			-- Case 2b)
 			-- There is a square part to draw
@@ -152,18 +158,19 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			local bBottom = project(edgeB.a)
 			local bTop = project(edgeB.b)
 			local edgeB_adj = edgeB.a + axis*(-bBottom)
+			local hint: Vector3? = nil
 			if math.abs(bBottom) > 0.0001 then
 				if bBottom < 0 then
-					fill(point, edgeB.a, edgeB_adj)
+					hint = fill(point, edgeB.a, edgeB_adj)
 				else
-					fill(point, point + axis*bBottom, edgeB.a)
+					hint = fill(point, point + axis*bBottom, edgeB.a)
 				end
 			end
 			if math.abs(bTop - edgeA.length) > 0.0001 then
 				if bTop > edgeA.length then
-					fill(edgeA.b, edgeB_adj + axis*edgeA.length, edgeB_adj + axis*bTop)
+					fill(edgeA.b, edgeB_adj + axis*edgeA.length, edgeB_adj + axis*bTop, hint)
 				else
-					fill(point + axis*bTop, edgeA.b, edgeB_adj + axis*bTop)
+					fill(point + axis*bTop, edgeA.b, edgeB_adj + axis*bTop, hint)
 				end
 			end
 
@@ -171,12 +178,20 @@ local function doFill(edgeA, edgeB, extrudeDirectionModifier: number, thicknessO
 			local perpDir = -normal:Cross(axis)
 			local perpLen = ((edgeA.a + edgeA.direction*(edgeB.a - edgeA.a):Dot(edgeA.direction)) - edgeB.a).magnitude
 
-			-- See if we need to flip the normal so the fill goes into the geometry
+			-- See if we need to flip the normal so the fill goes into the geometry.
+			-- When the surface normal lies nearly in the fill plane, fall through
+			-- to the referencePart position heuristic.
+			local normalFlipped = false
 			if desiredSurfaceNormal then
-				if normal:Dot(desiredSurfaceNormal) > 0 then
-					normal = -normal
+				local dot = normal:Dot(desiredSurfaceNormal)
+				if math.abs(dot) > 0.1 then
+					if dot > 0 then
+						normal = -normal
+					end
+					normalFlipped = true
 				end
-			else
+			end
+			if not normalFlipped then
 				if (edgeA.part.Position - point):Dot(normal) < 0 then
 					normal = -normal
 				end

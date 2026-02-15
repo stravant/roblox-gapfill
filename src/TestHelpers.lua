@@ -51,6 +51,7 @@ function TestHelpers.makeTestSettings(overrides: { [string]: any }?): Settings.G
 		ThicknessMode = "OneStud",
 		CustomThickness = 0.2,
 		UnionResults = false,
+		SelectResults = false,
 		ClassicUI = false,
 		FillMode = "Edge",
 	}

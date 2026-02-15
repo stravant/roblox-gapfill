@@ -1,6 +1,7 @@
 --!strict
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local Selection = game:GetService("Selection")
 local UserInputService = game:GetService("UserInputService")
 
 local Src = script.Parent
@@ -135,8 +136,8 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 		end
 	end
 
-	local function tryUnionParts(parts: { BasePart }?, referencePart: BasePart?)
-		SessionUtils.tryUnionParts(parts, currentSettings, referencePart)
+	local function tryUnionParts(parts: { BasePart }?, referencePart: BasePart?): { BasePart }?
+		return SessionUtils.tryUnionParts(parts, currentSettings, referencePart)
 	end
 
 	local isOverUI = false
@@ -206,6 +207,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 
 				local recording = SessionUtils.startRecording("GapFill Changes")
 
+				local resultParts: { BasePart }? = nil
 				if theFace and savedEdgeA and savedEdgeA.part == hoverFace.part then
 					-- Same part — extrude on the selected face
 					local function prepEdge(edge: any)
@@ -224,7 +226,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[4],
 							b = theFace.vertices[3],
 						}
-						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal), hoverFace.part)
+						resultParts = tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal), hoverFace.part)
 					elseif #theFace.vertices == 3 then
 						local edge1 = prepEdge{
 							a = theFace.vertices[1],
@@ -234,11 +236,15 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[1],
 							b = theFace.vertices[3],
 						}
-						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal), hoverFace.part)
+						resultParts = tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal), hoverFace.part)
 					end
 				else
 					-- Different parts — normal fill
-					tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor, mSurfaceNormal), savedEdgeA.part)
+					resultParts = tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor, mSurfaceNormal), savedEdgeA.part)
+				end
+
+				if currentSettings.SelectResults and resultParts then
+					Selection:Set((resultParts :: any) :: { Instance })
 				end
 
 				if recording then

@@ -12,6 +12,7 @@ export type GapFillSettings = PluginGuiTypes.PluginGuiSettings & {
 	ThicknessMode: "BestGuess" | "OneStud" | "Custom" | "Thinnest" | "Plate",
 	CustomThickness: number,
 	UnionResults: boolean,
+	SelectResults: boolean,
 	ClassicUI: boolean,
 	FillMode: FillMode,
 }
@@ -37,6 +38,7 @@ local function loadSettings(plugin: Plugin): GapFillSettings
 		ThicknessMode = if raw.ThicknessMode ~= nil then raw.ThicknessMode else "BestGuess",
 		CustomThickness = if raw.CustomThickness ~= nil then raw.CustomThickness else 0.2,
 		UnionResults = if raw.UnionResults ~= nil then raw.UnionResults else false,
+		SelectResults = if raw.SelectResults ~= nil then raw.SelectResults else false,
 		ClassicUI = if raw.ClassicUI ~= nil then raw.ClassicUI else false,
 		FillMode = if raw.FillMode ~= nil then raw.FillMode else "Edge",
 	}
@@ -57,6 +59,7 @@ local function saveSettings(plugin: Plugin, settings: GapFillSettings)
 		ThicknessMode = settings.ThicknessMode,
 		CustomThickness = settings.CustomThickness,
 		UnionResults = settings.UnionResults,
+		SelectResults = settings.SelectResults,
 		ClassicUI = settings.ClassicUI,
 		FillMode = settings.FillMode,
 	})

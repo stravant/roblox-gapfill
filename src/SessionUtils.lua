@@ -47,9 +47,9 @@ function SessionUtils.getForceFactor(currentSettings: Settings.GapFillSettings):
 	end
 end
 
-function SessionUtils.tryUnionParts(parts: { BasePart }?, currentSettings: Settings.GapFillSettings, referencePart: BasePart?)
+function SessionUtils.tryUnionParts(parts: { BasePart }?, currentSettings: Settings.GapFillSettings, referencePart: BasePart?): { BasePart }?
 	if not parts or #parts < 2 or not currentSettings.UnionResults then
-		return
+		return parts
 	end
 	local first = parts[1]
 	local parent = first.Parent
@@ -123,7 +123,9 @@ function SessionUtils.tryUnionParts(parts: { BasePart }?, currentSettings: Setti
 		for _, part in parts do
 			part.Parent = nil
 		end
+		return { union }
 	end
+	return parts
 end
 
 function SessionUtils.startRecording(name: string): string?

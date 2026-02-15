@@ -218,8 +218,22 @@ local function OptionsPanel(props: {
 		Warning = props.Settings.UnionResults and e(UnionIsExpensiveWarning, {
 			LayoutOrder = 2,
 		}),
-		ClassicUI = e(HelpGui.WithHelpIcon, {
+		SelectResults = e(HelpGui.WithHelpIcon, {
 			LayoutOrder = 3,
+			Subject = e(Checkbox, {
+				Label = "Select results",
+				Checked = props.Settings.SelectResults,
+				Changed = function(newValue: boolean)
+					props.Settings.SelectResults = newValue
+					props.UpdatedSettings()
+				end,
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText = "Select the created parts after filling.",
+			}),
+		}),
+		ClassicUI = e(HelpGui.WithHelpIcon, {
+			LayoutOrder = 4,
 			Subject = e(Checkbox, {
 				Label = "Classic UI style",
 				Checked = props.Settings.ClassicUI,

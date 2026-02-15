@@ -94,13 +94,22 @@ local function fillTriangle(
 	local maincf = CFrame.fromMatrix(a, normal:Cross(-ab.unit), normal, -ab.unit)
 
 	-- Figure out if we need to flip the normal so the fill goes into
-	-- the geometry (flush with the clicked surface)
+	-- the geometry (flush with the clicked surface).
+	-- When the disambiguating normal lies nearly in the fill plane
+	-- (dot product close to zero), fall through to the referencePart
+	-- position heuristic to avoid random per-triangle flip decisions.
 	local flip = 1
+	local flipDetermined = false
 	if params.desiredSurfaceNormal then
-		if normal:Dot(params.desiredSurfaceNormal) > 0 then
-			flip = -1
+		local dot = normal:Dot(params.desiredSurfaceNormal)
+		if math.abs(dot) > 0.1 then
+			if dot > 0 then
+				flip = -1
+			end
+			flipDetermined = true
 		end
-	else
+	end
+	if not flipDetermined then
 		if (params.referencePart.Position - a):Dot(normal) < 0 then
 			flip = -1
 		end
@@ -123,8 +132,11 @@ local function fillTriangle(
 	flip *= params.extrudeDirectionModifier
 
 	if normalHint then
-		if (normal*flip):Dot(normalHint) < 0 then
-			flip = -flip
+		local dot = (normal*flip):Dot(normalHint)
+		if math.abs(dot) > 0.1 then
+			if dot < 0 then
+				flip = -flip
+			end
 		end
 	end
 

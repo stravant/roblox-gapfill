@@ -42,8 +42,11 @@ local function doPolygonFill(
 			params,
 			createdParts
 		)
-		-- Use the first triangle's normal as hint for the rest
-		if normalHint == nil then
+		-- Always use the first triangle's result as hint for the rest.
+		-- resultNormal is perpendicular to the fill plane and correctly
+		-- flipped, so it's a reliable disambiguator even when the
+		-- original surfaceNormal was nearly in the fill plane.
+		if i == 2 then
 			normalHint = resultNormal
 		end
 	end
