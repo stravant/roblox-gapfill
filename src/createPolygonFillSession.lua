@@ -84,7 +84,7 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		local parent = refPart.Parent or workspace
 
 		local parts = doPolygonFill(vertices, refPart, surfaceNormal, thickness, forceFactor, parent)
-		SessionUtils.tryUnionParts(parts, currentSettings)
+		SessionUtils.tryUnionParts(parts, currentSettings, refPart)
 
 		if recording then
 			SessionUtils.commitRecording(recording)

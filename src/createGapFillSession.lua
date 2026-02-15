@@ -135,8 +135,8 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 		end
 	end
 
-	local function tryUnionParts(parts: { BasePart }?)
-		SessionUtils.tryUnionParts(parts, currentSettings)
+	local function tryUnionParts(parts: { BasePart }?, referencePart: BasePart?)
+		SessionUtils.tryUnionParts(parts, currentSettings, referencePart)
 	end
 
 	local isOverUI = false
@@ -224,7 +224,7 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[4],
 							b = theFace.vertices[3],
 						}
-						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal))
+						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal), hoverFace.part)
 					elseif #theFace.vertices == 3 then
 						local edge1 = prepEdge{
 							a = theFace.vertices[1],
@@ -234,11 +234,11 @@ local function createGapFillSession(plugin: Plugin, currentSettings: Settings.Ga
 							a = theFace.vertices[1],
 							b = theFace.vertices[3],
 						}
-						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal))
+						tryUnionParts(doFill(edge1, edge2, -1, thicknessOverride, forceFactor, mSurfaceNormal), hoverFace.part)
 					end
 				else
 					-- Different parts — normal fill
-					tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor, mSurfaceNormal))
+					tryUnionParts(doFill(savedEdgeA, hoverFace, 1, thicknessOverride, forceFactor, mSurfaceNormal), savedEdgeA.part)
 				end
 
 				if recording then
