@@ -89,7 +89,6 @@ function SessionUtils.tryUnionParts(parts: { BasePart }?, currentSettings: Setti
 		tempPart.Size = tempSize
 		tempPart.CFrame = refRotation + offsetPos
 		tempPart.Anchored = true
-		tempPart.Parent = parent
 	end
 
 	local ok, union = pcall(function()
@@ -107,11 +106,13 @@ function SessionUtils.tryUnionParts(parts: { BasePart }?, currentSettings: Setti
 	if ok and union then
 		-- Subtract the temp part away if we used one
 		if tempPart then
+			-- Need to make sure the temp part is big enough to fully subtract
+			tempPart.Size *= 2
 			local subOk, subResult = pcall(function()
 				return union:SubtractAsync({ tempPart :: Part })
 			end)
 			if subOk and subResult then
-				union:Destroy()
+				union.Parent = nil
 				union = subResult
 			end
 		end
@@ -120,12 +121,8 @@ function SessionUtils.tryUnionParts(parts: { BasePart }?, currentSettings: Setti
 		union.UsePartColor = true
 		copyPartProps(first, union)
 		for _, part in parts do
-			part:Destroy()
+			part.Parent = nil
 		end
-	end
-
-	if tempPart then
-		tempPart:Destroy()
 	end
 end
 

@@ -4,6 +4,15 @@ local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local ServerStorage = game:GetService("ServerStorage")
 local Selection = game:GetService("Selection")
 
+-- Wait until next resumption point
+local function waitUntilResumptionPoint()
+	local running = coroutine.running()
+	task.defer(function()
+		coroutine.resume(running)
+	end)
+	coroutine.yield()
+end
+
 local function createVirtualUndo(waypointName: string, attributeName: string)
 	local installed = false
 
@@ -51,6 +60,8 @@ local function createVirtualUndo(waypointName: string, attributeName: string)
 			coroutine.yield()
 			completed = true
 		end
+		-- Make sure the undo has fully cleared before proceeding with the undo
+		waitUntilResumptionPoint()
 		if foundWaypointName ~= waypointName then
 			ChangeHistoryService:Redo()
 		end

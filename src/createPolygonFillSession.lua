@@ -73,9 +73,9 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 			return
 		end
 
-		virtualUndo.uninstall()
-
-		local recording = SessionUtils.startRecording("Polygon Fill")
+		-- Need these because virtualUndo may yield
+		local normalToUse = surfaceNormal
+		local verticesToUse = table.clone(vertices)
 
 		-- Polygon mode can't infer thickness from geometry like edge mode can,
 		-- so default BestGuess to 0.2 studs
@@ -83,7 +83,11 @@ local function createPolygonFillSession(plugin: Plugin, currentSettings: Setting
 		local forceFactor = SessionUtils.getForceFactor(currentSettings)
 		local parent = refPart.Parent or workspace
 
-		local parts = doPolygonFill(vertices, refPart, surfaceNormal, thickness, forceFactor, parent)
+		virtualUndo.uninstall()
+
+		local recording = SessionUtils.startRecording("Polygon Fill")
+
+		local parts = doPolygonFill(verticesToUse, refPart, normalToUse, thickness, forceFactor, parent)
 		SessionUtils.tryUnionParts(parts, currentSettings, refPart)
 
 		if recording then
